@@ -84,7 +84,6 @@ for epoch in range(1, n_epoch + 1):
 
         optimizer.zero_grads()
         loss, acc = forward(x_batch, y_batch)
-        print("Iteration {}: Loss {}; Acc {}".format(i, float(loss.data), float(acc.data)))
         loss.backward()
         optimizer.update()
 
@@ -108,7 +107,7 @@ for epoch in range(1, n_epoch + 1):
     sum_loss = 0
     for i in range(N_test, N, batchsize):
         x_batch = xp.asarray(data[i:i+batchsize])
-        y_batch = xp.asarray(labels[i:i+batchsize])
+        y_batch = xp.asarray(labels[i:i+batchsize], dtype=np.int32)
 
         loss, acc = forward(x_batch, y_batch, train=False)
 
