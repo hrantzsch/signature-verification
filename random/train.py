@@ -12,7 +12,7 @@ from chainer import optimizers
 parser = argparse.ArgumentParser()
 parser.add_argument('--gpu', '-g', default=-1, type=int,
                     help='GPU ID (negative value indicates CPU)')
-parser.add_argument('data', metavar='hdf5path',
+parser.add_argument('hdf5data',
                     help='Path to data in hdf5 format')
 args = parser.parse_args()
 
@@ -25,7 +25,7 @@ xp = cuda.cupy if args.gpu >= 0 else np
 batchsize = 120
 n_epoch = 20
 
-h5data = h5py.File(args.hdf5path, 'r')
+h5data = h5py.File(args.hdf5data, 'r')
 data = h5data['data']
 labels = h5data['label']
 
