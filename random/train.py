@@ -23,7 +23,7 @@ parser.add_argument('--epoch', '-e', default=10, type=int,
                     help='Number of epochs to learn')
 parser.add_argument('--out', '-o', default='model',
                     help='Path to save model on each validation')
-parser.add_argument('--snapshotInterval', '-s', default=0,
+parser.add_argument('--interval', '-i', default=0,
                     help='Snapshot interval in epochs (0 for no snapshots)')
 args = parser.parse_args()
 
@@ -34,6 +34,7 @@ xp = cuda.cupy if args.gpu >= 0 else np
 # hyperparams
 batchsize = args.batchsize
 n_epoch = args.epoch
+snapshot_interval = int(args.interval)
 
 h5data = h5py.File(args.hdf5data, 'r')
 data = h5data['data']
@@ -84,7 +85,7 @@ for epoch in range(1, n_epoch + 1):
 
     print('train mean loss={}, accuracy={}'.format(
         sum_loss / N, sum_accuracy / N))
-    if args.snapshotInterval > 0 and epoch % args.snapshotInterval == 0:
+    if snapshot_interval > 0 and epoch % snapshot_interval == 0:
         pickle.dump(model, open(args.out + '_snap{}'.format(epoch), 'wb'), -1)
 
     # evaluation
