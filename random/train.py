@@ -10,20 +10,22 @@ import chainer.functions as F
 from chainer import cuda
 from chainer import optimizers
 
-from alex import Alex
+from models import Alex, SignVerRnd
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--gpu', '-g', default=-1, type=int,
-                    help='GPU ID (negative value indicates CPU)')
 parser.add_argument('hdf5data',
                     help='Path to data in hdf5 format')
+parser.add_argument('model',
+                    help='Model architecture [alex, signverrnd]')
+parser.add_argument('--out', '-o', default='model',
+                    help='Path to save model on each validation')
+parser.add_argument('--gpu', '-g', default=-1, type=int,
+                    help='GPU ID (negative value indicates CPU)')
 parser.add_argument('--batchsize', '-b', type=int, default=120,
                     help='Learning minibatch size')
 parser.add_argument('--epoch', '-e', default=10, type=int,
                     help='Number of epochs to learn')
-parser.add_argument('--out', '-o', default='model',
-                    help='Path to save model on each validation')
-parser.add_argument('--interval', '-i', default=0,
+parser.add_argument('--interval', '-i', default=0, type=int,
                     help='Snapshot interval in epochs (0 for no snapshots)')
 args = parser.parse_args()
 
@@ -34,7 +36,7 @@ xp = cuda.cupy if args.gpu >= 0 else np
 # hyperparams
 batchsize = args.batchsize
 n_epoch = args.epoch
-snapshot_interval = int(args.interval)
+snapshot_interval = args.interval
 
 h5data = h5py.File(args.hdf5data, 'r')
 data = h5data['data']
@@ -44,7 +46,12 @@ N = data.shape[0]
 N_train = int(N * 0.9)
 N_test = int(N - N_train)
 
-model = Alex()
+if args.model == 'signverrnd':
+    model = SignVerRnd()
+elif args.model == 'alex':
+    model = Alex()
+else:
+    raise ValueError("{}: No such model!".format(args.model))
 
 if args.gpu >= 0:
     cuda.get_device(args.gpu).use()

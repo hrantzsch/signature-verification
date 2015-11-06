@@ -37,3 +37,32 @@ class Alex(chainer.FunctionSet):
         h = F.dropout(F.relu(self.fc7(h)))
         h = self.fc8(h)
         return F.softmax_cross_entropy(h, t), F.accuracy(h, t)
+
+
+class SignVerRnd(chainer.FunctionSet):
+
+    """A model to verify signatures against random forgeries,
+       inspired by LeNet and AlexNet"""
+
+    def __init__(self):
+        super(SignVerRnd, self).__init__(
+            conv1=F.Convolution2D(1,  15, 9),
+            conv2=F.Convolution2D(15, 40, 5),
+            conv3=F.Convolution2D(40, 50, 3),
+            fc1=F.Linear(13200, 4096),
+            fc2=F.Linear(4096, 1000),
+        )
+
+    def forward(self, x_data, y_data, train=True):
+        x = chainer.Variable(x_data, volatile=not train)
+        t = chainer.Variable(y_data, volatile=not train)
+
+        h = F.max_pooling_2d(F.relu(
+            F.local_response_normalization(self.conv1(x))), 2, stride=2)
+        h = F.max_pooling_2d(F.relu(
+            F.local_response_normalization(self.conv2(h))), 2, stride=2)
+        h = F.max_pooling_2d(F.relu(
+            F.local_response_normalization(self.conv3(h))), 2, stride=2)
+        h = F.dropout(F.relu(self.fc1(h)))
+        h = F.relu(self.fc2(h))
+        return F.softmax_cross_entropy(h, t), F.accuracy(h, t)
