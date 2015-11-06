@@ -17,7 +17,7 @@ class Alex(chainer.FunctionSet):
             conv3=F.Convolution2D(256, 384,  3, pad=1),
             conv4=F.Convolution2D(384, 384,  3, pad=1),
             conv5=F.Convolution2D(384, 256,  3, pad=1),
-            fc6=F.Linear(9216, 4096),
+            fc6=F.Linear(4608, 4096),
             fc7=F.Linear(4096, 4096),
             fc8=F.Linear(4096, 1000),
         )
