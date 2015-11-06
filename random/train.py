@@ -2,6 +2,7 @@ import argparse
 
 import numpy as np
 import h5py
+import pickle
 
 import chainer
 from chainer import computational_graph as c
@@ -14,6 +15,12 @@ parser.add_argument('--gpu', '-g', default=-1, type=int,
                     help='GPU ID (negative value indicates CPU)')
 parser.add_argument('hdf5data',
                     help='Path to data in hdf5 format')
+parser.add_argument('--batchsize', '-B', type=int, default=120,
+                    help='Learning minibatch size')
+parser.add_argument('--epoch', '-E', default=10, type=int,
+                    help='Number of epochs to learn')
+parser.add_argument('--out', '-o', default='model',
+                    help='Path to save model on each validation')
 args = parser.parse_args()
 
 if args.gpu >= 0:
@@ -22,8 +29,8 @@ xp = cuda.cupy if args.gpu >= 0 else np
 
 
 # hyperparams
-batchsize = 120
-n_epoch = 20
+batchsize = args.batchsize
+n_epoch = args.epoch
 
 h5data = h5py.File(args.hdf5data, 'r')
 data = h5data['data']
@@ -101,6 +108,7 @@ for epoch in range(1, n_epoch + 1):
 
     print('train mean loss={}, accuracy={}'.format(
         sum_loss / N, sum_accuracy / N))
+    pickle.dump(model, open(args.out + '_snap{}'.format(epoch), 'wb'), -1)
 
     # evaluation
     sum_accuracy = 0
@@ -116,3 +124,6 @@ for epoch in range(1, n_epoch + 1):
 
     print('test  mean loss={}, accuracy={}'.format(
         sum_loss / N_test, sum_accuracy / N_test))
+
+# Save final model
+pickle.dump(model, open(args.out, 'wb'), -1)
