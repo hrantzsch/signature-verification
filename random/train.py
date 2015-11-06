@@ -10,23 +10,26 @@ import chainer.functions as F
 from chainer import cuda
 from chainer import optimizers
 
+from alex import Alex
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--gpu', '-g', default=-1, type=int,
                     help='GPU ID (negative value indicates CPU)')
 parser.add_argument('hdf5data',
                     help='Path to data in hdf5 format')
-parser.add_argument('--batchsize', '-B', type=int, default=120,
+parser.add_argument('--batchsize', '-b', type=int, default=120,
                     help='Learning minibatch size')
-parser.add_argument('--epoch', '-E', default=10, type=int,
+parser.add_argument('--epoch', '-e', default=10, type=int,
                     help='Number of epochs to learn')
 parser.add_argument('--out', '-o', default='model',
                     help='Path to save model on each validation')
+parser.add_argument('--snapshotInterval', '-s', default=0,
+                    help='Snapshot interval in epochs (0 for no snapshots)')
 args = parser.parse_args()
 
 if args.gpu >= 0:
     cuda.check_cuda_available()
 xp = cuda.cupy if args.gpu >= 0 else np
-
 
 # hyperparams
 batchsize = args.batchsize
@@ -40,38 +43,11 @@ N = data.shape[0]
 N_train = int(N * 0.9)
 N_test = int(N - N_train)
 
-model = chainer.FunctionSet(
-    conv1=F.Convolution2D(1,  6, 11),
-    conv2=F.Convolution2D(6, 16, 8),
-    conv3=F.Convolution2D(16, 30, 6),
-    conv4=F.Convolution2D(30, 50,  3),
-    conv5=F.Convolution2D(50, 24,  3),
-    fc6=F.Linear(2856, 3072),
-    fc7=F.Linear(3072, 3072),
-    fc8=F.Linear(3072, 1),
-)
+model = Alex()
 
 if args.gpu >= 0:
     cuda.get_device(args.gpu).use()
     model.to_gpu()
-
-
-def forward(x_data, y_data, train=True):
-    x = chainer.Variable(x_data, volatile=not train)
-    t = chainer.Variable(y_data, volatile=not train)
-
-    h = F.max_pooling_2d(F.relu(
-        F.local_response_normalization(model.conv1(x))), 2, stride=2)
-    h = F.max_pooling_2d(F.relu(
-        F.local_response_normalization(model.conv2(h))), 2, stride=2)
-    h = F.relu(model.conv3(h))
-    h = F.relu(model.conv4(h))
-    h = F.max_pooling_2d(F.relu(model.conv5(h)), 3, stride=2)
-    h = F.dropout(F.relu(model.fc6(h)))
-    h = F.dropout(F.relu(model.fc7(h)))
-    h = model.fc8(h)
-    return F.softmax_cross_entropy(h, t), F.accuracy(h, t)
-
 
 # Setup optimizer
 optimizer = optimizers.Adam()
@@ -90,7 +66,7 @@ for epoch in range(1, n_epoch + 1):
         y_batch = xp.asarray(labels[i:i+batchsize], dtype=np.int32)
 
         optimizer.zero_grads()
-        loss, acc = forward(x_batch, y_batch)
+        loss, acc = model.forward(x_batch, y_batch)
         loss.backward()
         optimizer.update()
 
@@ -108,7 +84,8 @@ for epoch in range(1, n_epoch + 1):
 
     print('train mean loss={}, accuracy={}'.format(
         sum_loss / N, sum_accuracy / N))
-    pickle.dump(model, open(args.out + '_snap{}'.format(epoch), 'wb'), -1)
+    if args.snapshotInterval > 0 and epoch % args.snapshotInterval == 0:
+        pickle.dump(model, open(args.out + '_snap{}'.format(epoch), 'wb'), -1)
 
     # evaluation
     sum_accuracy = 0
@@ -117,7 +94,7 @@ for epoch in range(1, n_epoch + 1):
         x_batch = xp.asarray(data[i:i+batchsize])
         y_batch = xp.asarray(labels[i:i+batchsize], dtype=np.int32)
 
-        loss, acc = forward(x_batch, y_batch, train=False)
+        loss, acc = model.forward(x_batch, y_batch, train=False)
 
         sum_loss += float(loss.data) * len(y_batch)
         sum_accuracy += float(acc.data) * len(y_batch)
