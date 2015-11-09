@@ -6,18 +6,9 @@ from PIL import Image
 
 from store2hdf5 import store2hdf5, normalize_image, image_to_np_array
 
-parser = argparse.ArgumentParser()
-parser.add_argument('data',
-                    help='Path to extracted GPDS data')
-parser.add_argument('out', default='data.hdf5',
-                    help='Path to save hdf5 data')
-parser.add_argument('--forgeries', '-f', default=False,
-                    help='Label skilled forgeries as positive sample')
-args = parser.parse_args()
 
-
-def get_files(no_forgeries=False):
-    for (path, _, files) in os.walk(args.data):
+def get_files(data_dir, no_forgeries=False):
+    for (path, _, files) in os.walk(data_dir):
         for f in files:
             if '.jpg' in f and not (no_forgeries and 'cf' in f):
                 yield os.path.join(path, f)
@@ -37,7 +28,16 @@ def store_files(files, h5file, target_size, chunksize):
 
 
 if __name__ == "__main__":
-    all_files = list(get_files(no_forgeries=not args.forgeries))
+    parser = argparse.ArgumentParser()
+    parser.add_argument('data',
+                        help='Path to extracted GPDS data')
+    parser.add_argument('out', default='data.hdf5',
+                        help='Path to save hdf5 data')
+    parser.add_argument('--forgeries', '-f', default=False,
+                        help='Label skilled forgeries as positive sample')
+    args = parser.parse_args()
+
+    all_files = list(get_files(args.data, no_forgeries=not args.forgeries))
     np.random.shuffle(all_files)
 
     target_size = (200, 120)
