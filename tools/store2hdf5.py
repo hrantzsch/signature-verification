@@ -29,7 +29,7 @@ def store2hdf5(h5file, data, labels, chunksize):
                 data_shape[3],
             ),
             dtype="f",
-            chunks=(chunksize,1,120,200),
+            chunks=(chunksize,1,100,200),
         )
         label_shape = labels.shape
         label_dataset = h5file.create_dataset(

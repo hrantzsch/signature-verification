@@ -47,6 +47,14 @@ def crop(image, ratio):
     return image[y_min+500:y_max+500, x_min+500:x_max+500]
 
 
+def prep(image, size, aspect_ratio):
+    """Takes a PIL Image to crop and resize it.
+       Returns a np/scipy image"""
+    image = crop(fromimage(image), aspect_ratio)
+    image = imresize(image, size, mode='L')
+    return image
+
+
 if __name__ == "__main__":
     from mkdata_random import get_files
     import os
@@ -61,8 +69,7 @@ if __name__ == "__main__":
         with Image.open(f) as image:
             print("{}/{} - {}".format(count, num_imgs, f), end='\r')
             count += 1
-            image = crop(fromimage(image), (2.0 / 1))
-            image = imresize(image, (100, 200), mode='L')
+            image = prep(image, (100, 200), (2.0 / 1))
             imsave("/home/hannes/tmp/images/{}".format(os.path.basename(f)), image)
 
 
