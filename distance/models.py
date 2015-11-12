@@ -1,4 +1,10 @@
-class GoogLeNetBN(chainer.FunctionSet):
+import chainer
+import chainer.functions as F
+
+from tripletloss import triplet_loss
+
+
+class EmbedNet(chainer.FunctionSet):
     """New GoogLeNet of BatchNormalization version.
        Adapted from the example provided with chainer."""
 
@@ -18,24 +24,29 @@ class GoogLeNetBN(chainer.FunctionSet):
             inc4e=F.InceptionBN(576, 0, 128, 192, 192, 256, 'max', stride=2),
             inc5a=F.InceptionBN(1024, 352, 192, 320, 160, 224, 'avg', 128),
             inc5b=F.InceptionBN(1024, 352, 192, 320, 192, 224, 'max', 128),
-            out=F.Linear(1024, 1000),
+            out=F.Linear(1024, 128),
 
-            conva=F.Convolution2D(576, 128, 1, nobias=True),
-            norma=F.BatchNormalization(128),
-            lina=F.Linear(2048, 1024, nobias=True),
-            norma2=F.BatchNormalization(1024),
-            outa=F.Linear(1024, 1000),
+            # conva=F.Convolution2D(576, 128, 1, nobias=True),
+            # norma=F.BatchNormalization(128),
+            # lina=F.Linear(2048, 1024, nobias=True),
+            # norma2=F.BatchNormalization(1024),
+            # outa=F.Linear(1024, 1000),
+            #
+            # convb=F.Convolution2D(576, 128, 1, nobias=True),
+            # normb=F.BatchNormalization(128),
+            # linb=F.Linear(2048, 1024, nobias=True),
+            # normb2=F.BatchNormalization(1024),
+            # outb=F.Linear(1024, 1000),
 
-            convb=F.Convolution2D(576, 128, 1, nobias=True),
-            normb=F.BatchNormalization(128),
-            linb=F.Linear(2048, 1024, nobias=True),
-            normb2=F.BatchNormalization(1024),
-            outb=F.Linear(1024, 1000),
+            embed=F.EmbedID(128, 128)  # openface uses 128 dimensions
         )
 
-    def forward(self, x_data, y_data, train=True):
-        x = chainer.Variable(x_data, volatile=not train)
-        t = chainer.Variable(y_data, volatile=not train)
+    # def triplet_loss(self, triplet):
+    #     anc, pos, neg = triplet
+
+    def forward_image(self, x):
+        """Forward one image of a triplet through the network, perform L2
+           normalization, and embed in Euclidean space"""
 
         h = F.max_pooling_2d(
             F.relu(self.norm1(self.conv1(x))),  3, stride=2, pad=1)
@@ -47,24 +58,40 @@ class GoogLeNetBN(chainer.FunctionSet):
         h = self.inc3c(h)
         h = self.inc4a(h)
 
-        a = F.average_pooling_2d(h, 5, stride=3)
-        a = F.relu(self.norma(self.conva(a)))
-        a = F.relu(self.norma2(self.lina(a)))
-        a = self.outa(a)
-        a = F.softmax_cross_entropy(a, t)
+        # a = F.average_pooling_2d(h, 5, stride=3)
+        # a = F.relu(self.norma(self.conva(a)))
+        # a = F.relu(self.norma2(self.lina(a)))
+        # a = self.outa(a)
+        # a = F.softmax_cross_entropy(a, t)
 
         h = self.inc4b(h)
         h = self.inc4c(h)
         h = self.inc4d(h)
 
-        b = F.average_pooling_2d(h, 5, stride=3)
-        b = F.relu(self.normb(self.convb(b)))
-        b = F.relu(self.normb2(self.linb(b)))
-        b = self.outb(b)
-        b = F.softmax_cross_entropy(b, t)
+        # b = F.average_pooling_2d(h, 5, stride=3)
+        # b = F.relu(self.normb(self.convb(b)))
+        # b = F.relu(self.normb2(self.linb(b)))
+        # b = self.outb(b)
+        # b = F.softmax_cross_entropy(b, t)
 
         h = self.inc4e(h)
         h = self.inc5a(h)
         h = F.average_pooling_2d(self.inc5b(h), 7)
         h = self.out(h)
-        return 0.3 * (a + b) + F.softmax_cross_entropy(h, t), F.accuracy(h, t)
+
+        h = F.local_response_normalization(h)
+        h = self.embed(h)
+
+        return h
+
+    def forward(self, triplet, train=True):
+        """Forward three samples through the network and compute the triplet
+           loss. Triplets should follow the form (anchor, positive, negative).
+           See also Sec 3.1 of Schroff et al.'s FaceNet paper."""
+
+        embedded_triplet = [forward_image(chainer.Variable(
+                                          sample, volatile=not train))
+                            for sample in triplet]
+
+        return triplet_loss(embedded_triplet)
+        # return 0.3 * (a + b) + F.softmax_cross_entropy(h, t), F.accuracy(h, t)
