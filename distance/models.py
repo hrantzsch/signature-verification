@@ -9,7 +9,7 @@ class EmbedNet(chainer.FunctionSet):
        Adapted from the example provided with chainer."""
 
     def __init__(self):
-        super(GoogLeNetBN, self).__init__(
+        super(EmbedNet, self).__init__(
             conv1=F.Convolution2D(1, 64, 7, stride=2, pad=3, nobias=True),
             norm1=F.BatchNormalization(64),
             conv2=F.Convolution2D(64, 192, 3, pad=1, nobias=True),
@@ -26,55 +26,28 @@ class EmbedNet(chainer.FunctionSet):
             inc5b=F.InceptionBN(1024, 352, 192, 320, 192, 224, 'max', 128),
             out=F.Linear(1024, 128),
 
-            # conva=F.Convolution2D(576, 128, 1, nobias=True),
-            # norma=F.BatchNormalization(128),
-            # lina=F.Linear(2048, 1024, nobias=True),
-            # norma2=F.BatchNormalization(1024),
-            # outa=F.Linear(1024, 1000),
-            #
-            # convb=F.Convolution2D(576, 128, 1, nobias=True),
-            # normb=F.BatchNormalization(128),
-            # linb=F.Linear(2048, 1024, nobias=True),
-            # normb2=F.BatchNormalization(1024),
-            # outb=F.Linear(1024, 1000),
-
             embed=F.EmbedID(128, 128)  # openface uses 128 dimensions
         )
 
-    # def triplet_loss(self, triplet):
-    #     anc, pos, neg = triplet
-
-    def forward_image(self, x):
-        """Forward one image of a triplet through the network, perform L2
+    def embed_batch(self, x, train=True):
+        """Forward a batch images through the network, perform L2
            normalization, and embed in Euclidean space"""
 
         h = F.max_pooling_2d(
-            F.relu(self.norm1(self.conv1(x))),  3, stride=2, pad=1)
+            F.relu(self.norm1(self.conv1(x))), 3, stride=2, pad=1)
         h = F.max_pooling_2d(
             F.relu(self.norm2(self.conv2(h))), 3, stride=2, pad=1)
 
         h = self.inc3a(h)
         h = self.inc3b(h)
         h = self.inc3c(h)
+
         h = self.inc4a(h)
-
-        # a = F.average_pooling_2d(h, 5, stride=3)
-        # a = F.relu(self.norma(self.conva(a)))
-        # a = F.relu(self.norma2(self.lina(a)))
-        # a = self.outa(a)
-        # a = F.softmax_cross_entropy(a, t)
-
         h = self.inc4b(h)
         h = self.inc4c(h)
         h = self.inc4d(h)
-
-        # b = F.average_pooling_2d(h, 5, stride=3)
-        # b = F.relu(self.normb(self.convb(b)))
-        # b = F.relu(self.normb2(self.linb(b)))
-        # b = self.outb(b)
-        # b = F.softmax_cross_entropy(b, t)
-
         h = self.inc4e(h)
+
         h = self.inc5a(h)
         h = F.average_pooling_2d(self.inc5b(h), 7)
         h = self.out(h)
@@ -84,14 +57,40 @@ class EmbedNet(chainer.FunctionSet):
 
         return h
 
-    def forward(self, triplet, train=True):
-        """Forward three samples through the network and compute the triplet
-           loss. Triplets should follow the form (anchor, positive, negative).
-           See also Sec 3.1 of Schroff et al.'s FaceNet paper."""
+    def forward(self, x_data, train=True):
 
-        embedded_triplet = [forward_image(chainer.Variable(
-                                          sample, volatile=not train))
-                            for sample in triplet]
+        """"""
 
-        return triplet_loss(embedded_triplet)
+        # x_data is a batch of size 3n following the form:
+        #
+        # | anchor_1   |
+        # | [...]      |
+        # | anchor_n   |
+        # | positive_1 |
+        # | [...]      |
+        # | positive_n |
+        # | negative_1 |
+        # | [...]      |
+        # | negative_n |
+        #
+        # the batch can be forwarded through the network as a whole and split
+        # afterwards to 3 batches of size n, which are the input for the
+        # triplet_loss
+
+        # forward batch through embedding network
+        x = chainer.Variable(x_data, volatile=not train)
+        embedded = self.embed_batch(x, train)
+
+        # split to anchors, positives, and negatives
+        n = embedded.size / 3
+        a, p, n = np.split(embedded, [n, n*2])
+
+        # compute loss
+        return triplet_loss(a, p, n)
+
+        # embedded_triplet = [self.forward_image(chainer.Variable(
+        #                                   sample, volatile=not train))
+        #                     for sample in triplet]
+        #
+        # return triplet_loss(embedded_triplet)
         # return 0.3 * (a + b) + F.softmax_cross_entropy(h, t), F.accuracy(h, t)

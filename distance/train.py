@@ -53,7 +53,7 @@ def forward(x_data, y_data, train=True):
 
 
 # Setup optimizer
-optimizer = optimizers.Adam()
+optimizer = optimizers.AdaDelta()
 optimizer.setup(model)
 
 # Learning loop

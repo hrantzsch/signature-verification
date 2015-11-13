@@ -31,14 +31,14 @@ class TripletLoss(function.Function):
         diff_ap = self.mse1.forward_cpu(tuple((a, p)))
         diff_an = self.mse2.forward_cpu(tuple((a, n)))
         dtype = diff_ap[0].dtype
-        distance = numpy.absolute(diff_ap[0] - diff_an[0] + self.margin)
+        distance = numpy.absolute(diff_ap[0] - diff_an[0] + self.margin * a.shape[0])
         return numpy.array(distance, dtype=dtype),
 
     def forward_gpu(self, inputs):
         a, p, n = inputs  # anchor, positive, negative
         diff_ap = self.mse1.forward_cpu(tuple((a, p)))
         diff_an = self.mse2.forward_cpu(tuple((a, n)))
-        distance = numpy.absolute(diff_ap[0] - diff_an[0] + self.margin)
+        distance = numpy.absolute(diff_ap[0] - diff_an[0] + self.margin * a.shape[0])
         return numpy.array(distance),
 
     def backward(self, inputs, gy):
