@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.misc import imread
+from scipy.misc import imread, imresize
 import chainer
 import os
 
@@ -26,24 +26,25 @@ from models import EmbedNet
 #     return (loss1, loss2)
 
 
+def get_images(paths):
+    imgDir = "/home/hannes/Data/gpdsSynth_scaled/"
+    paths = map(lambda p: os.path.join(imgDir, p), paths)
+    return np.array([resized(imread(fname))[np.newaxis, ...] for fname in paths],
+                    dtype=np.float32)
+
+
+def resized(img):
+    return imresize(img, (224, 224))
+
+
 def test_fwd_net():
     model = EmbedNet()
 
-    imgDir = "/home/hannes/Data/gpdsSynth_scaled/"
-    a = np.array([imread(fname)[np.newaxis, ...] for fname in [
-        os.path.join(imgDir, "001/c-001-01.jpg"),
-        os.path.join(imgDir, "003/c-003-01.jpg"),
-    ]], dtype=np.float32)
-    p = np.array([imread(fname)[np.newaxis, ...] for fname in [
-        os.path.join(imgDir, "001/c-001-02.jpg"),
-        os.path.join(imgDir, "004/c-004-01.jpg"),
-    ]], dtype=np.float32)
-    n = np.array([imread(fname)[np.newaxis, ...] for fname in [
-        os.path.join(imgDir, "002/c-002-01.jpg"),
-        os.path.join(imgDir, "003/c-003-02.jpg"),
-    ]], dtype=np.float32)
+    a = get_images(["001/c-001-01.jpg", "003/c-003-01.jpg"])
+    p = get_images(["001/c-001-02.jpg", "004/c-004-01.jpg"])
+    n = get_images(["002/c-002-01.jpg", "003/c-003-02.jpg"])
     batch = np.concatenate([a, p, n])
-    import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
     model.forward(batch)
 
 test_fwd_net()

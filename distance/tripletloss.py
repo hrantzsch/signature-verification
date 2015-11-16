@@ -42,6 +42,7 @@ class TripletLoss(function.Function):
         return numpy.array(distance),
 
     def backward(self, inputs, gy):
+        # TODO
         coeff = gy[0] * gy[0].dtype.type(2. / self.diff.size)
         gx0 = coeff * self.diff
         return gx0, -gx0
