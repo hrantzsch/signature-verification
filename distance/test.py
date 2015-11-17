@@ -34,7 +34,8 @@ def get_images(paths):
 
 
 def resized(img):
-    return imresize(img, (224, 224))
+    # return img
+    return imresize(img, (96, 192))
 
 
 def test_fwd_net():

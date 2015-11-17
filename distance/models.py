@@ -52,7 +52,7 @@ class EmbedNet(chainer.FunctionSet):
         h = self.inc4e(h)
 
         h = self.inc5a(h)
-        h = F.average_pooling_2d(self.inc5b(h), 7)
+        h = F.average_pooling_2d(self.inc5b(h), (3, 7))
         h = self.out(h)
 
         return h
