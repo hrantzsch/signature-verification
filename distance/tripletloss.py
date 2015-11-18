@@ -1,4 +1,4 @@
-import numpy
+import numpy as np
 
 import chainer
 from chainer import function
@@ -13,35 +13,32 @@ class TripletLoss(function.Function):
     def __init__(self, margin=0.2):
         super().__init__()
         self.margin = margin
-        self.mse1 = F.MeanSquaredError()
-        self.mse2 = F.MeanSquaredError()
 
     def check_type_forward(self, in_types):
         type_check.expect(in_types.size() == 3)
         type_check.expect(
-            in_types[0].dtype == numpy.float32,
-            in_types[1].dtype == numpy.float32,
-            in_types[2].dtype == numpy.float32,
+            in_types[0].dtype == np.float32,
+            in_types[1].dtype == np.float32,
+            in_types[2].dtype == np.float32,
             in_types[0].shape == in_types[1].shape,
             in_types[0].shape == in_types[2].shape
         )
 
-    def forward_cpu(self, inputs):
+    def forward(self, inputs):
         a, p, n = inputs  # anchor, positive, negative
-        diff_ap = self.mse1.forward_cpu(tuple((a, p)))
-        diff_an = self.mse2.forward_cpu(tuple((a, n)))
-        dtype = diff_ap[0].dtype
-        distance = numpy.absolute(diff_ap[0] - diff_an[0] + self.margin * a.shape[0])
-        return numpy.array(distance, dtype=dtype),
-
-    def forward_gpu(self, inputs):
-        a, p, n = inputs  # anchor, positive, negative
-        diff_ap = self.mse1.forward_cpu(tuple((a, p)))
-        diff_an = self.mse2.forward_cpu(tuple((a, n)))
-        distance = numpy.absolute(diff_ap[0] - diff_an[0] + self.margin * a.shape[0])
-        return numpy.array(distance),
+        N = a.shape[0]
+        # NOTE on using max(0, ...)
+        # the loss is < 0 if (a-n) > (a-p)
+        # that's what we want -- we don't want it increase the loss (by using
+        # abs(), and we don't want it to decrease the sum by leaving it < 0)
+        self.Li = np.maximum(0, (a-p)*(a-p) - (a-n)*(a-n) + self.margin)
+        dtype = a[0].dtype
+        return np.array(np.sum(self.Li) / N, dtype=dtype),
 
     def backward(self, inputs, gy):
+        # NOTE
+        a, p, n = inputs  # anchor, positive, negative
+        N = a.shape[0]
         # TODO
         coeff = gy[0] * gy[0].dtype.type(2. / self.diff.size)
         gx0 = coeff * self.diff

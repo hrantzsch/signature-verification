@@ -38,9 +38,10 @@ if __name__ == "__main__":
     parser.add_argument('out', default='data.hdf5',
                         help='Path to save hdf5 data')
     parser.add_argument('--forgeries', '-f', default=False, type=bool,
-                        help='Label skilled forgeries as positive sample')
+                        help='Label skilled forgeries as positive sample\
+                              Otherwise forgeries are ignored [False]')
     parser.add_argument('--prepare', '-p', default=False, type=bool,
-                        help='Crop and resize images')
+                        help='Crop and resize images [False]')
     args = parser.parse_args()
 
     all_files = list(get_files(args.data, no_forgeries=not args.forgeries))

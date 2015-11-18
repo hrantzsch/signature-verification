@@ -46,6 +46,6 @@ def test_fwd_net():
     n = get_images(["002/c-002-01.jpg", "003/c-003-02.jpg"])
     batch = np.concatenate([a, p, n])
     # import pdb; pdb.set_trace()
-    model.forward(batch)
+    print(model.forward(batch).data)
 
 test_fwd_net()
