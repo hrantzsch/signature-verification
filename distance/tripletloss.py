@@ -32,17 +32,20 @@ class TripletLoss(function.Function):
         # that's what we want -- we don't want it increase the loss (by using
         # abs(), and we don't want it to decrease the sum by leaving it < 0)
         self.Li = np.maximum(0, (a-p)*(a-p) - (a-n)*(a-n) + self.margin)
-        dtype = a[0].dtype
-        return np.array(np.sum(self.Li) / N, dtype=dtype),
+        return np.array(np.sum(self.Li) / N, dtype=a[0].dtype),
 
     def backward(self, inputs, gy):
         # NOTE
         a, p, n = inputs  # anchor, positive, negative
         N = a.shape[0]
         # TODO
-        coeff = gy[0] * gy[0].dtype.type(2. / self.diff.size)
-        gx0 = coeff * self.diff
-        return gx0, -gx0
+        # import pdb; pdb.set_trace()
+
+        coeff = gy[0] * gy[0].dtype.type(2. / self.Li.shape[0])
+        gx0 = coeff * self.Li * (n - p)
+        gx1 = coeff * self.Li * (p - a)
+        gx2 = coeff * self.Li * (a - n)
+        return gx0, gx1, gx2
 
 
 def triplet_loss(x0, x1, x2):
