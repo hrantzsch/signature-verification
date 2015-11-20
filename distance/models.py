@@ -4,6 +4,7 @@ import chainer.functions as F
 import numpy as np
 
 from tripletloss import triplet_loss
+from l2normalization import l2_normalization
 
 
 class EmbedNet(chainer.FunctionSet):
@@ -57,13 +58,15 @@ class EmbedNet(chainer.FunctionSet):
 
         return h
 
-    def embed_batch(self, x):
-        """Perform normalization and embed each sample in the given batch in a
-           128 dimensional Euclidean space"""
-
-        x_data = np.stack([sample.dot(sample) / sample.size * self.embed_size
-                           for sample in x.data]).astype(np.int32)
-        return self.embed(chainer.Variable(x_data))
+    # def embed_batch(self, x):
+    #     """Perform normalization and embed each sample in the given batch in a
+    #        128 dimensional Euclidean space"""
+    #
+    #     import pdb; pdb.set_trace()
+    #
+    #     x_data = np.stack([sample.dot(sample) / sample.size * self.embed_size
+    #                        for sample in x.data]).astype(np.int32)
+    #     return self.embed(chainer.Variable(x_data))
 
     def forward(self, x_data, train=True):
 
@@ -88,13 +91,12 @@ class EmbedNet(chainer.FunctionSet):
         # forward batch through deep network
         x = chainer.Variable(x_data, volatile=not train)
         out = self.forward_batch(x, train)
-
-        embedded = self.embed_batch(out)
+        norm = l2_normalization(out, scale=1000)
+        embedded = self.embed(norm)
 
         # split to anchors, positives, and negatives
-        n = embedded.data.shape[0] / 3
-        anc, pos, neg = [chainer.Variable(batch)
-                         for batch in np.split(embedded.data, [n, n*2])]
+        # n = embedded.data.shape[0] / 3        
+        anc, pos, neg = F.split_axis(embedded, 3, 0)
 
         # compute loss
         return triplet_loss(anc, pos, neg)
