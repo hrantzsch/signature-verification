@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.misc import imread, imresize
 import chainer
+from chainer import optimizers
 import os
 
 from tripletloss import triplet_loss
@@ -37,15 +38,29 @@ def resized(img):
     # return img
     return imresize(img, (96, 192))
 
+# def rnd_batches(batchSize, imgHeight, imgWidth):
+#     a = np.random.rand(batchSize, 1, imgHeight, imgWidth)
+#     p = np.random.rand(batchSize, 1, imgHeight, imgWidth)
+#     n = np.random.rand(batchSize, 1, imgHeight, imgWidth)
+#     return a, p, n
 
 def test_fwd_net():
     model = EmbedNet()
+    optimizer = optimizers.SGD()
+    optimizer.setup(model)
 
-    a = get_images(["001/c-001-01.jpg", "003/c-003-01.jpg"])
-    p = get_images(["001/c-001-02.jpg", "004/c-004-01.jpg"])
-    n = get_images(["002/c-002-01.jpg", "003/c-003-02.jpg"])
-    batch = np.concatenate([a, p, n])
-    # import pdb; pdb.set_trace()
-    print(model.forward(batch).data)
+    # a = get_images(["001/c-001-01.jpg", "003/c-003-01.jpg"])
+    # p = get_images(["001/c-001-02.jpg", "004/c-004-01.jpg"])
+    # n = get_images(["002/c-002-01.jpg", "003/c-003-02.jpg"])
+    # batch = np.concatenate([a, p, n])
+
+    batch = np.random.rand(21, 1, 96, 192).astype(np.float32)
+
+    while True:
+        optimizer.zero_grads()
+        loss = model.forward(batch)
+        print("loss: ", loss.data)
+        loss.backward()
+        optimizer.update()
 
 test_fwd_net()
