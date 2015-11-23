@@ -4,6 +4,9 @@ import chainer
 from chainer import function
 import chainer.functions as F
 from chainer.utils import type_check
+from chainer import cuda
+
+xp = cuda.cupy
 
 
 class TripletLoss(function.Function):
@@ -24,7 +27,7 @@ class TripletLoss(function.Function):
             in_types[0].shape == in_types[2].shape
         )
 
-    def forward(self, inputs):
+    def forward_cpu(self, inputs):
         a, p, n = inputs  # anchor, positive, negative
         N = a.shape[0]
         # NOTE on using max(0, ...)
@@ -33,6 +36,16 @@ class TripletLoss(function.Function):
         # abs(), and we don't want it to decrease the sum by leaving it < 0)
         self.Li = np.maximum(0, (a-p)*(a-p) - (a-n)*(a-n) + self.margin)
         return np.array(np.sum(self.Li) / N, dtype=a[0].dtype),
+
+    def forward_gpu(self, inputs):
+        a, p, n = inputs  # anchor, positive, negative
+        N = a.shape[0]
+        # NOTE on using max(0, ...)
+        # the loss is < 0 if (a-n) > (a-p)
+        # that's what we want -- we don't want it increase the loss (by using
+        # abs(), and we don't want it to decrease the sum by leaving it < 0)
+        self.Li = xp.maximum(0, (a-p)*(a-p) - (a-n)*(a-n) + self.margin)
+        return xp.sum(self.Li) / N,
 
     def backward(self, inputs, gy):
         # NOTE
