@@ -11,7 +11,7 @@ from tripletloss import triplet_loss
 from models import EmbedNet
 
 
-data_dir = "/home/hannes/tmp/images"
+data_dir = "/extra/data_sets/GPDSSyntheticSignatures/gpds_96x192/"
 
 
 def get_signature_path(person, sign_num):
