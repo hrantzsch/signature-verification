@@ -78,14 +78,16 @@ class EmbedNet(chainer.FunctionSet):
         # afterwards to 3 batches of size n, which are the input for the
         # triplet_loss
 
+
         # forward batch through deep network
         x = chainer.Variable(x_data, volatile=not train)
         out = self.forward_batch(x, train)
-        norm = l2_normalization(out, scale=1000)
+        norm = l2_normalization(out, scale=100)
         embedded = self.embed(norm)
 
         # split to anchors, positives, and negatives
         anc, pos, neg = F.split_axis(embedded, 3, 0)
 
         # compute loss
-        return triplet_loss(anc, pos, neg)
+        loss = triplet_loss(anc, pos, neg)
+        return loss
