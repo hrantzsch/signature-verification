@@ -2,6 +2,8 @@ import numpy as np
 
 from chainer import function
 from chainer.utils import type_check
+from chainer import cuda
+
 
 
 class L2Normalization(function.Function):
@@ -25,6 +27,14 @@ class L2Normalization(function.Function):
         N = (x.shape[0])
         self.norm = np.zeros(N, dtype=np.int32)
         # TODO there's a better way
+        for i in range(N):
+            self.norm[i] = x[i].dot(x[i]) * self.scale
+        return self.norm,
+
+    def forward_gpu(self, inputs):
+        x, = inputs
+        N = (x.shape[0])
+        self.norm = cuda.cupy.zeros(N, dtype=np.int32)
         for i in range(N):
             self.norm[i] = x[i].dot(x[i]) * self.scale
         return self.norm,

@@ -58,16 +58,6 @@ class EmbedNet(chainer.FunctionSet):
 
         return h
 
-    # def embed_batch(self, x):
-    #     """Perform normalization and embed each sample in the given batch in a
-    #        128 dimensional Euclidean space"""
-    #
-    #     import pdb; pdb.set_trace()
-    #
-    #     x_data = np.stack([sample.dot(sample) / sample.size * self.embed_size
-    #                        for sample in x.data]).astype(np.int32)
-    #     return self.embed(chainer.Variable(x_data))
-
     def forward(self, x_data, train=True):
 
         """"""
@@ -95,7 +85,6 @@ class EmbedNet(chainer.FunctionSet):
         embedded = self.embed(norm)
 
         # split to anchors, positives, and negatives
-        # n = embedded.data.shape[0] / 3        
         anc, pos, neg = F.split_axis(embedded, 3, 0)
 
         # compute loss

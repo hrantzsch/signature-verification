@@ -2,11 +2,14 @@ import numpy as np
 from scipy.misc import imread, imresize
 import chainer
 from chainer import optimizers
+from chainer import cuda
 import os
 import pickle
 
 from tripletloss import triplet_loss
 from models import EmbedNet
+
+xp = cuda.cupy
 
 # def test_triplet_loss():
 #
@@ -45,12 +48,17 @@ def resized(img):
 #     n = np.random.rand(batchSize, 1, imgHeight, imgWidth)
 #     return a, p, n
 
+def test_fwd_net():
+    model = EmbedNet()
+    optimizer = optimizers.SGD()
+    optimizer.setup(model)
+
     # a = get_images(["001/c-001-01.jpg", "003/c-003-01.jpg"])
     # p = get_images(["001/c-001-02.jpg", "004/c-004-01.jpg"])
     # n = get_images(["002/c-002-01.jpg", "003/c-003-02.jpg"])
     # batch = np.concatenate([a, p, n])
 
-    batch = np.random.rand(21, 1, 96, 192).astype(np.float32)
+    batch = xp.random.rand(210, 1, 96, 192).astype(xp.float32)
 
 
 if __name__ == "__main__":
