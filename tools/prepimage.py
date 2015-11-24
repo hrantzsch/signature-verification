@@ -59,8 +59,13 @@ if __name__ == "__main__":
     from mkdata_random import get_files
     import os
 
-    images = list(get_files("/home/hannes/Data/firmasSINTESISmanuscritas"))
+    outDir = "/home/hannes/tmp/images/"
+    imgDir = "/home/hannes/Data/firmasSINTESISmanuscritas"
+    images = list(get_files(imgDir))
     num_imgs = len(images)
+
+    for i in range(1, 4001):
+        os.makedirs(os.path.join(outDir, "{:03d}".format(i)), exist_ok=True)
 
     image = images[0]
 
@@ -69,9 +74,9 @@ if __name__ == "__main__":
         with Image.open(f) as image:
             print("{}/{} - {}".format(count, num_imgs, f), end='\r')
             count += 1
-            image = prep(image, (100, 200), (2.0 / 1))
-            imsave("/home/hannes/tmp/images/{}".format(os.path.basename(f)), image)
-
+            image = prep(image, (96, 192), (2.0 / 1))
+            fname = os.path.join(outDir, os.path.relpath(f, imgDir))
+            imsave(fname, image)
 
     # print (avg_x, avg_y, avg_x / num_imgs, avg_y / num_imgs)
     # 86551127 168976381 400.69966203703706 782.2980601851851

@@ -5,7 +5,6 @@ from chainer.utils import type_check
 from chainer import cuda
 
 
-
 class L2Normalization(function.Function):
 
     """"""
