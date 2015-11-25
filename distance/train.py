@@ -2,6 +2,7 @@ import os
 import numpy as np
 from scipy.misc import imread
 import pickle
+import argparse
 
 from chainer import optimizers
 from chainer import cuda
@@ -11,16 +12,30 @@ from tripletloss import triplet_loss
 from models import EmbedNet
 
 
-# args
-data_dir = "/extra/data_sets/GPDSSyntheticSignatures/gpds_96x192/"
-n_epoch = 50
-batch_triplets = 12  # batchsize will be 3 * batch_triplets
-gpu = 0
-xp = cuda.cupy if gpu >= 0 else np
+parser = argparse.ArgumentParser()
+parser.add_argument('data', help='Path to training data')
+parser.add_argument('--batchsize', '-b', type=int, default=12,
+                    help='Learning minibatch size')
+parser.add_argument('--epoch', '-e', default=50, type=int,
+                    help='Number of epochs to learn')
+parser.add_argument('--gpu', '-g', default=-1, type=int,
+                    help='GPU ID (negative value indicates CPU)')
+parser.add_argument('--out', '-o', default='model',
+                    help='Path to save model snapshots')
+parser.add_argument('--interval', '-i', default=10, type=int,
+                    help='Snapshot interval in epochs')
+parser.add_argument('--resume', '-r', default=None,
+                    help='Path to snapshots to continue from')
+args = parser.parse_args()
+if args.gpu >= 0:
+    cuda.check_cuda_available()
+xp = cuda.cupy if args.gpu >= 0 else np
+
+batch_triplets = args.batchsize  # batchsize will be 3 * batch_triplets
 
 
 def get_signature_path(person, sign_num):
-    directory = os.path.join(data_dir, "{:03d}".format(person))
+    directory = os.path.join(args.data, "{:03d}".format(person))
     if sign_num > 24:  # a forgery
         prefix = "cf"
         sign_num -= 24
@@ -65,18 +80,25 @@ def get_batch(anchor_id, num_triplets):
 
 
 # model setup
-model = EmbedNet()
+if args.resume is None:
+    model = EmbedNet()
+else:
+    print("resuming training on model {}".format(args.resume))
+    model = pickle.load(open(args.resume, "rb"))
+
 optimizer = optimizers.SGD()
 optimizer.setup(model)
 
-model.to_gpu(gpu)
+if args.gpu >= 0:
+    model.to_gpu(args.gpu)
+
 graph_generated = False
 
-for epoch in range(1, n_epoch + 1):
+for epoch in range(1, args.epoch + 1):
     print('epoch', epoch)
 
     # training
-    anchors = list(range(1, 4001))
+    anchors = list(range(1, 3))
     np.random.shuffle(anchors)
 
     sum_loss = 0
@@ -87,7 +109,7 @@ for epoch in range(1, n_epoch + 1):
 
         optimizer.zero_grads()
         loss = model.forward(x_batch)
-        print("Iteration {:04d}: Loss {}".format(iteration, float(loss.data)))
+        print("iteration {:04d}: loss {}".format(iteration, float(loss.data)), end='\r')
 
         loss.backward()
         optimizer.update()
@@ -106,8 +128,10 @@ for epoch in range(1, n_epoch + 1):
 
     print('train mean loss={}'.format(sum_loss / iteration))
 
-    if epoch % 5 == 0:
-        pickle.dump(model, open("model_{}.pkl".format(epoch), "wb"))
+    if epoch % args.interval == 0:
+        snapshot_name = "{}_{}.pkl".format(args.out, epoch)
+        print("saving snapshot to", snapshot_name)
+        pickle.dump(model, open(snapshot_name, "wb"))
 
 
     # evaluation -- later...
