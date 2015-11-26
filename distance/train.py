@@ -3,12 +3,13 @@ import numpy as np
 import pickle
 import argparse
 
+import chainer
 from chainer import optimizers
 from chainer import cuda
 from chainer import computational_graph as c
 
 from tripletloss import triplet_loss
-from models import EmbedNet
+from embednet import EmbedNet
 from data_loader import DataLoader
 
 
@@ -61,10 +62,10 @@ for epoch in range(1, args.epoch + 1):
     iteration = 0
     for i in anchors:
         iteration += 1
-        x_batch = dl.get_batch(i, batch_triplets)
+        x = chainer.Variable(dl.get_batch(i, batch_triplets))
 
         optimizer.zero_grads()
-        loss = model.forward(x_batch)
+        loss = model(x)
         print("iteration {:04d}: loss {}".format(iteration, float(loss.data)), end='\r')
 
         loss.backward()

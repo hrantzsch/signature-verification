@@ -1,5 +1,6 @@
 import chainer
 import chainer.functions as F
+import chainer.links as L
 
 import numpy as np
 
@@ -7,7 +8,7 @@ from tripletloss import triplet_loss
 from l2normalization import l2_normalization
 
 
-class EmbedNet(chainer.FunctionSet):
+class EmbedNet(chainer.Chain):
     """New GoogLeNet of BatchNormalization version.
        Adapted from the example provided with chainer."""
 
@@ -15,23 +16,23 @@ class EmbedNet(chainer.FunctionSet):
 
     def __init__(self):
         super(EmbedNet, self).__init__(
-            conv1=F.Convolution2D(1, 64, 7, stride=2, pad=3, nobias=True),
-            norm1=F.BatchNormalization(64),
-            conv2=F.Convolution2D(64, 192, 3, pad=1, nobias=True),
-            norm2=F.BatchNormalization(192),
-            inc3a=F.InceptionBN(192, 64, 64, 64, 64, 96, 'avg', 32),
-            inc3b=F.InceptionBN(256, 64, 64, 96, 64, 96, 'avg', 64),
-            inc3c=F.InceptionBN(320, 0, 128, 160, 64, 96, 'max', stride=2),
-            inc4a=F.InceptionBN(576, 224, 64, 96, 96, 128, 'avg', 128),
-            inc4b=F.InceptionBN(576, 192, 96, 128, 96, 128, 'avg', 128),
-            inc4c=F.InceptionBN(576, 128, 128, 160, 128, 160, 'avg', 128),
-            inc4d=F.InceptionBN(576, 64, 128, 192, 160, 192, 'avg', 128),
-            inc4e=F.InceptionBN(576, 0, 128, 192, 192, 256, 'max', stride=2),
-            inc5a=F.InceptionBN(1024, 352, 192, 320, 160, 224, 'avg', 128),
-            inc5b=F.InceptionBN(1024, 352, 192, 320, 192, 224, 'max', 128),
-            out=F.Linear(1024, 128),
+            conv1=L.Convolution2D(1, 64, 7, stride=2, pad=3, nobias=True),
+            norm1=L.BatchNormalization(64),
+            conv2=L.Convolution2D(64, 192, 3, pad=1, nobias=True),
+            norm2=L.BatchNormalization(192),
+            inc3a=L.InceptionBN(192, 64, 64, 64, 64, 96, 'avg', 32),
+            inc3b=L.InceptionBN(256, 64, 64, 96, 64, 96, 'avg', 64),
+            inc3c=L.InceptionBN(320, 0, 128, 160, 64, 96, 'max', stride=2),
+            inc4a=L.InceptionBN(576, 224, 64, 96, 96, 128, 'avg', 128),
+            inc4b=L.InceptionBN(576, 192, 96, 128, 96, 128, 'avg', 128),
+            inc4c=L.InceptionBN(576, 128, 128, 160, 128, 160, 'avg', 128),
+            inc4d=L.InceptionBN(576, 64, 128, 192, 160, 192, 'avg', 128),
+            inc4e=L.InceptionBN(576, 0, 128, 192, 192, 256, 'max', stride=2),
+            inc5a=L.InceptionBN(1024, 352, 192, 320, 160, 224, 'avg', 128),
+            inc5b=L.InceptionBN(1024, 352, 192, 320, 192, 224, 'max', 128),
+            out=L.Linear(1024, 128),
 
-            embed=F.EmbedID(self.embed_size, 128)  # openface uses 128 dimensions
+            embed=L.EmbedID(self.embed_size, 128)  # openface uses 128 dimensions
         )
 
     def forward_dnn(self, x):
@@ -61,15 +62,15 @@ class EmbedNet(chainer.FunctionSet):
     def forward_embed(self, x):
         """Perform L2 normalizationa and embedding"""
 
-        norm = l2_normalization(x, scale=100)
+        norm = l2_normalization(x, scale=300)
         return self.embed(norm)
 
-    def forward(self, x_data, train=True):
+    def __call__(self, x):
         """
         Forward through DNN, L2 normalization and embedding.
         Returns the triplet loss.
 
-        x_data is a batch of size 3n following the form:
+        x is a batch of size 3n following the form:
 
         | anchor_1   |
         | [...]      |
@@ -86,7 +87,6 @@ class EmbedNet(chainer.FunctionSet):
         # to 3 batches of size n, which are the input for the triplet_loss
 
         # forward batch through deep network
-        x = chainer.Variable(x_data, volatile=not train)
         h = self.forward_dnn(x)
         h = self.forward_embed(h)
 
