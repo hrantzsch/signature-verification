@@ -86,8 +86,10 @@ for epoch in range(1, args.epoch + 1):
 
     if epoch % args.interval == 0:
         snapshot_name = "{}_{}.pkl".format(args.out, epoch)
+        snapshot_params = "{}_{}_params.pkl".format(args.out, epoch)
         print("saving snapshot to", snapshot_name)
         pickle.dump(model, open(snapshot_name, "wb"))
+        pickle.dump(model.parameters, open(snapshot_params, "wb"))
 
 
     # evaluation -- later...
