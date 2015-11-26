@@ -1,6 +1,5 @@
 import chainer
 import chainer.functions as F
-from chainer.utils import type_check
 
 import numpy as np
 
@@ -59,7 +58,7 @@ class EmbedNet(chainer.FunctionSet):
 
         return h
 
-    def embed(self, x):
+    def forward_embed(self, x):
         """Perform L2 normalizationa and embedding"""
 
         norm = l2_normalization(x, scale=100)
@@ -89,7 +88,7 @@ class EmbedNet(chainer.FunctionSet):
         # forward batch through deep network
         x = chainer.Variable(x_data, volatile=not train)
         h = self.forward_dnn(x)
-        h = self.embed(h)
+        h = self.forward_embed(h)
 
         # split to anchors, positives, and negatives
         anc, pos, neg = F.split_axis(h, 3, 0)
@@ -103,19 +102,11 @@ class EmbedNet(chainer.FunctionSet):
         Returns the Eucledean distance.
         """
 
-        # Expect exactly two samples in the batch
-        import pdb; pdb.set_trace()
-        
-        type_check.expect(
-            x_data.dtype == np.float32,
-            x_data.ndim >= 2,
-        )
-
         x = chainer.Variable(x_data, volatile=True)
 
         # forward and embed
         h = self.forward_dnn(x)
-        h = self.embed(h)
+        h = self.forward_embed(h)
         a, b = F.split_axis(h, 2, 0)
 
         return F.mean_squared_error(a, b)
