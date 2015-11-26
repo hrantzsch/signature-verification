@@ -96,13 +96,11 @@ class EmbedNet(chainer.Chain):
         # compute loss
         return triplet_loss(anc, pos, neg)
 
-    def verify(self, x_data):
+    def verify(self, x):
         """
         Forward two samples through network and embed them.
         Returns the Eucledean distance.
         """
-
-        x = chainer.Variable(x_data, volatile=True)
 
         # forward and embed
         h = self.forward_dnn(x)

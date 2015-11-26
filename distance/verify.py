@@ -23,6 +23,6 @@ xp = cuda.cupy
 samples = [xp.asarray(imread(args.sample_a).astype(xp.float32)[xp.newaxis, xp.newaxis, ...]),
            xp.asarray(imread(args.sample_b).astype(xp.float32)[xp.newaxis, xp.newaxis, ...])]
 
-samples = xp.concatenate(samples)
+samples = chainer.Variable(xp.concatenate(samples))
 distance = model.verify(samples)
 print(distance.data)
