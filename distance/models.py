@@ -1,5 +1,6 @@
 import chainer
 import chainer.functions as F
+from chainer.utils import type_check
 
 import numpy as np
 
@@ -34,7 +35,7 @@ class EmbedNet(chainer.FunctionSet):
             embed=F.EmbedID(self.embed_size, 128)  # openface uses 128 dimensions
         )
 
-    def forward_batch(self, x, train=True):
+    def forward_dnn(self, x):
         """Forward a batch images through the network"""
 
         h = F.max_pooling_2d(
@@ -58,36 +59,63 @@ class EmbedNet(chainer.FunctionSet):
 
         return h
 
+    def embed(self, x):
+        """Perform L2 normalizationa and embedding"""
+
+        norm = l2_normalization(x, scale=100)
+        return self.embed(norm)
+
     def forward(self, x_data, train=True):
+        """
+        Forward through DNN, L2 normalization and embedding.
+        Returns the triplet loss.
 
-        """"""
+        x_data is a batch of size 3n following the form:
 
-        # x_data is a batch of size 3n following the form:
-        #
-        # | anchor_1   |
-        # | [...]      |
-        # | anchor_n   |
-        # | positive_1 |
-        # | [...]      |
-        # | positive_n |
-        # | negative_1 |
-        # | [...]      |
-        # | negative_n |
-        #
-        # the batch can be forwarded through the network as a whole and split
-        # afterwards to 3 batches of size n, which are the input for the
-        # triplet_loss
+        | anchor_1   |
+        | [...]      |
+        | anchor_n   |
+        | positive_1 |
+        | [...]      |
+        | positive_n |
+        | negative_1 |
+        | [...]      |
+        | negative_n |
+        """
 
+        # The batch is forwarded through the network as a whole and then split
+        # to 3 batches of size n, which are the input for the triplet_loss
 
         # forward batch through deep network
         x = chainer.Variable(x_data, volatile=not train)
-        out = self.forward_batch(x, train)
-        norm = l2_normalization(out, scale=100)
-        embedded = self.embed(norm)
+        h = self.forward_dnn(x)
+        h = self.embed(h)
 
         # split to anchors, positives, and negatives
-        anc, pos, neg = F.split_axis(embedded, 3, 0)
+        anc, pos, neg = F.split_axis(h, 3, 0)
 
         # compute loss
-        loss = triplet_loss(anc, pos, neg)
-        return loss
+        return triplet_loss(anc, pos, neg)
+
+    def verify(self, x_data):
+        """
+        Forward two samples through network and embed them.
+        Returns the Eucledean distance.
+        """
+
+        # Expect exactly two samples in the batch
+        import pdb; pdb.set_trace()
+        
+        type_check.expect(
+            x_data.dtype == np.float32,
+            x_data.ndim >= 2,
+        )
+
+        x = chainer.Variable(x_data, volatile=True)
+
+        # forward and embed
+        h = self.forward_dnn(x)
+        h = self.embed(h)
+        a, b = F.split_axis(h, 2, 0)
+
+        return F.mean_squared_error(a, b)
