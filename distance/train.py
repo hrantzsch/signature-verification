@@ -12,6 +12,17 @@ from embednet import EmbedNet
 from data_loader import DataLoader
 
 
+def make_snapshot(model, optimizer, epoch, name):
+    serializers.save_hdf5('{}_{}.model'.format(name, epoch), model)
+    serializers.save_hdf5('{}_{}.state'.format(name, epoch), optimizer)
+    print("snapshot created")
+
+
+def train_test_anchors(test_fraction, num_classes=10):
+    t = int(num_classes * test_fraction)
+    return list(range(1, num_classes+1))[:t], list(range(1, num_classes+1))[-t:]
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument('data', help='Path to training data')
 parser.add_argument('--batchsize', '-b', type=int, default=12,
@@ -32,6 +43,7 @@ parser.add_argument('--test', '-t', default=0.1, type=float,
                     help='Fraction of samples to spare for testing (0.1)')
 args = parser.parse_args()
 
+
 if args.gpu >= 0:
     cuda.check_cuda_available()
 xp = cuda.cupy if args.gpu >= 0 else np
@@ -39,18 +51,6 @@ xp = cuda.cupy if args.gpu >= 0 else np
 batch_triplets = args.batchsize  # batchsize will be 3 * batch_triplets
 
 dl = DataLoader(args.data, xp)
-
-
-def make_snapshot(model, optimizer, epoch, name):
-    serializers.save_hdf5('{}_{}.model'.format(name, epoch), model)
-    serializers.save_hdf5('{}_{}.state'.format(name, epoch), optimizer)
-    print("snapshot created")
-
-
-def train_test_anchors(test_fraction, num_classes=10):
-    t = int(num_classes * test_fraction)
-    return list(range(1, num_classes+1))[:t], list(range(1, num_classes+1))[-t:]
-
 
 # model setup
 model = EmbedNet()
@@ -83,24 +83,21 @@ for epoch in range(1, args.epoch + 1):
         iteration += 1
         x = chainer.Variable(dl.get_batch(i, batch_triplets))
 
-        optimizer.zero_grads()
-        loss = model(x)
-        print("iteration {:04d}: loss {}".format(iteration, float(loss.data)), end='\r')
+        optimizer.update(model, x, train=True)
 
-        loss.backward()
-        optimizer.update()
+        print("iteration {:04d}: loss {}".format(iteration, float(model.loss.data)), end='\r')
 
         if not graph_generated:
             with open("graph.dot", "w") as o:
-                o.write(c.build_computational_graph((loss, )).dump())
+                o.write(c.build_computational_graph((model.loss, )).dump())
             with open("graph.wo_split.dot", "w") as o:
-                g = c.build_computational_graph((loss, ),
+                g = c.build_computational_graph((model.loss, ),
                                                 remove_split=True)
                 o.write(g.dump())
             graph_generated = True
             print('graph generated')
 
-        sum_loss += float(loss.data)
+        sum_loss += float(model.loss.data)
 
     print('train mean loss={}'.format(sum_loss / iteration))
 
@@ -108,7 +105,6 @@ for epoch in range(1, args.epoch + 1):
         make_snapshot(model, optimizer, epoch, args.out)
 
 
-    # evaluation -- later...
     # sum_accuracy = 0
     # sum_loss = 0
     # for i in range(N_test, N, batchsize):

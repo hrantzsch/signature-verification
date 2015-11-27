@@ -65,7 +65,7 @@ class EmbedNet(chainer.Chain):
         norm = l2_normalization(x, scale=300)
         return self.embed(norm)
 
-    def __call__(self, x):
+    def __call__(self, x, train=True):
         """
         Forward through DNN, L2 normalization and embedding.
         Returns the triplet loss.
@@ -94,7 +94,8 @@ class EmbedNet(chainer.Chain):
         anc, pos, neg = F.split_axis(h, 3, 0)
 
         # compute loss
-        return triplet_loss(anc, pos, neg)
+        self.loss = triplet_loss(anc, pos, neg)
+        return self.loss
 
     def verify(self, x):
         """
