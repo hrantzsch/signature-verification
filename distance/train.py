@@ -12,35 +12,6 @@ from embednet import EmbedNet
 from data_loader import DataLoader
 
 
-def make_snapshot(model, optimizer, epoch, name):
-    serializers.save_hdf5('{}_{}.model'.format(name, epoch), model)
-    serializers.save_hdf5('{}_{}.state'.format(name, epoch), optimizer)
-    print("snapshot created")
-
-
-def train_test_anchors(test_fraction, num_classes=10):
-    t = int(num_classes * test_fraction)
-    return list(range(1, num_classes+1))[:t], list(range(1, num_classes+1))[-t:]
-
-
-def run_batch(model, optimizer, dl, anchor_id, train=True):
-    volatile = 'off' if model.train else 'on'
-    x = chainer.Variable(dl.get_batch(i, batch_triplets))
-    if train:
-        optimizer.update(model, x)
-    else:
-        model(x, compute_acc=True)
-
-
-def write_graph(loss):
-    with open("graph.dot", "w") as o:
-        o.write(c.build_computational_graph((loss, )).dump())
-    with open("graph.wo_split.dot", "w") as o:
-        g = c.build_computational_graph((loss, ), remove_split=True)
-        o.write(g.dump())
-    print('graph generated')
-
-
 parser = argparse.ArgumentParser()
 parser.add_argument('data', help='Path to training data')
 parser.add_argument('--batchsize', '-b', type=int, default=12,
@@ -67,8 +38,37 @@ if args.gpu >= 0:
 xp = cuda.cupy if args.gpu >= 0 else np
 
 batch_triplets = args.batchsize  # batchsize will be 3 * batch_triplets
-
 dl = DataLoader(args.data, xp)
+
+
+def make_snapshot(model, optimizer, epoch, name):
+    serializers.save_hdf5('{}_{}.model'.format(name, epoch), model)
+    serializers.save_hdf5('{}_{}.state'.format(name, epoch), optimizer)
+    print("snapshot created")
+
+
+def train_test_anchors(test_fraction, num_classes=4000):
+    t = int(num_classes * test_fraction)
+    return list(range(1, num_classes+1))[:t], list(range(1, num_classes+1))[-t:]
+
+
+def run_batch(model, optimizer, dl, anchor_id, train=True):
+    volatile = 'off' if model.train else 'on'
+    x = chainer.Variable(dl.get_batch(i, batch_triplets))
+    if train:
+        optimizer.update(model, x)
+    else:
+        model(x, compute_acc=True)
+
+
+def write_graph(loss):
+    with open("graph.dot", "w") as o:
+        o.write(c.build_computational_graph((loss, )).dump())
+    with open("graph.wo_split.dot", "w") as o:
+        g = c.build_computational_graph((loss, ), remove_split=True)
+        o.write(g.dump())
+    print('graph generated')
+
 
 # model setup
 model = EmbedNet()
@@ -121,7 +121,6 @@ for epoch in range(1, args.epoch + 1):
         run_batch(model, optimizer, dl, i, train=False)
 
         sum_loss += float(model.loss.data)
-        # sum_accuracy += float(model.accuracy.data)
         sum_accuracy += float(model.accuracy.data)
 
     print('test mean loss={}, accuracy={}'.format(
