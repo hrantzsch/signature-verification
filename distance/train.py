@@ -49,7 +49,7 @@ def make_snapshot(model, optimizer, epoch, name):
 
 def train_test_anchors(test_fraction, num_classes=4000):
     t = int(num_classes * test_fraction)
-    return list(range(1, num_classes+1))[:t], list(range(1, num_classes+1))[-t:]
+    return list(range(1, num_classes+1))[:-t], list(range(1, num_classes+1))[-t:]
 
 
 def run_batch(model, optimizer, dl, anchor_id, train=True):
@@ -99,7 +99,7 @@ for epoch in range(1, args.epoch + 1):
     for i in train:
         iteration += 1
         run_batch(model, optimizer, dl, i, train=True)
-        print("iteration {:04d}: loss {}".format(
+        print("train {:04d}: loss={}".format(
             iteration, float(model.loss.data)), end='\r')
         sum_loss += float(model.loss.data)
 
@@ -120,6 +120,8 @@ for epoch in range(1, args.epoch + 1):
         iteration += 1
         run_batch(model, optimizer, dl, i, train=False)
 
+        print("test {:04d}: loss={}, accuracy={}".format(
+            iteration, float(model.loss.data)), float(model.accuracy.data), end='\r')
         sum_loss += float(model.loss.data)
         sum_accuracy += float(model.accuracy.data)
 
