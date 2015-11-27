@@ -4,8 +4,7 @@ import pickle
 import argparse
 
 import chainer
-from chainer import optimizers
-from chainer import cuda
+from chainer import optimizers, cuda, serializers
 from chainer import computational_graph as c
 
 from tripletloss import triplet_loss
@@ -21,13 +20,16 @@ parser.add_argument('--epoch', '-e', default=50, type=int,
                     help='Number of epochs to learn')
 parser.add_argument('--gpu', '-g', default=-1, type=int,
                     help='GPU ID (negative value indicates CPU)')
-parser.add_argument('--out', '-o', default='model',
+parser.add_argument('--out', '-o', default='signdist',
                     help='Path to save model snapshots')
 parser.add_argument('--interval', '-i', default=10, type=int,
                     help='Snapshot interval in epochs')
-parser.add_argument('--resume', '-r', default=None,
-                    help='Path to snapshots to continue from')
+parser.add_argument('--initmodel', '-m', default='',
+                    help='Initialize the model from given file')
+parser.add_argument('--resume', '-r', default='',
+                    help='Resume the optimization from snapshot')
 args = parser.parse_args()
+
 if args.gpu >= 0:
     cuda.check_cuda_available()
 xp = cuda.cupy if args.gpu >= 0 else np
@@ -36,18 +38,28 @@ batch_triplets = args.batchsize  # batchsize will be 3 * batch_triplets
 
 dl = DataLoader(args.data, xp)
 
+
+def make_snapshot(model, optimizer, epoch, name):
+    serializers.save_hdf5('{}_{}.model'.format(name, epoch), model)
+    serializers.save_hdf5('{}_{}.state'.format(name, epoch), optimizer)
+    print("snapshot created")
+
+
 # model setup
-if args.resume is None:
-    model = EmbedNet()
-else:
-    print("resuming training on model {}".format(args.resume))
-    model = pickle.load(open(args.resume, "rb"))
+model = EmbedNet()
+if args.gpu >= 0:
+    model.to_gpu(args.gpu)
 
 optimizer = optimizers.SGD()
 optimizer.setup(model)
 
-if args.gpu >= 0:
-    model.to_gpu(args.gpu)
+if args.initmodel:
+    print('Load model from', args.initmodel)
+    serializers.load_hdf5(args.initmodel, model)
+if args.resume:
+    print('Load optimizer state from', args.resume)
+    serializers.load_hdf5(args.resume, optimizer)
+
 
 graph_generated = False
 
@@ -86,11 +98,7 @@ for epoch in range(1, args.epoch + 1):
     print('train mean loss={}'.format(sum_loss / iteration))
 
     if epoch % args.interval == 0:
-        snapshot_name = "{}_{}.pkl".format(args.out, epoch)
-        snapshot_params = "{}_{}_params.pkl".format(args.out, epoch)
-        print("saving snapshot to", snapshot_name)
-        pickle.dump(model, open(snapshot_name, "wb"))
-        pickle.dump(model.parameters, open(snapshot_params, "wb"))
+        make_snapshot(model, optimizer, epoch, args.out)
 
 
     # evaluation -- later...
