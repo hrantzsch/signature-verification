@@ -33,21 +33,17 @@ class TripletLoss(function.Function):
         # that's what we want -- we don't want it increase the loss (by using
         # abs(), and we don't want it to decrease the sum by leaving it < 0)
         self.Li = np.maximum(0, (a-p)*(a-p) - (a-n)*(a-n) + self.margin)
-        return np.array(np.sum(self.Li) / N, dtype=a[0].dtype),
+        return np.array(np.sum(self.Li) / a.size, dtype=a[0].dtype),
 
     def forward_gpu(self, inputs):
         a, p, n = inputs  # anchor, positive, negative
         N = a.shape[0]
         self.Li = cuda.cupy.maximum(0, (a-p)*(a-p) - (a-n)*(a-n) + self.margin)
-        return cuda.cupy.sum(self.Li) / N,
+        return self.Li.sum() / a.size,
 
     def backward(self, inputs, gy):
-        # NOTE
         a, p, n = inputs  # anchor, positive, negative
         N = a.shape[0]
-        # TODO
-        # import pdb; pdb.set_trace()
-
         coeff = gy[0] * gy[0].dtype.type(2. / self.Li.shape[0])
         gx0 = coeff * self.Li * (n - p)
         gx1 = coeff * self.Li * (p - a)
@@ -87,16 +83,13 @@ class TripletAccuracy(function.Function):
         a, p, n = inputs  # anchor, positive, negative
         N = a.shape[0]
         self.Li = np.maximum(0, (a-p)*(a-p) - (a-n)*(a-n))
-        # import pdb; pdb.set_trace()
-
         return np.array(self.Li[self.Li > self.margin].size / a.size, dtype=a[0].dtype),
-        # return np.array(np.sum(self.Li) / N, dtype=a[0].dtype),
 
     def forward_gpu(self, inputs):
         a, p, n = inputs  # anchor, positive, negative
         N = a.shape[0]
         self.Li = cuda.cupy.maximum(0, (a-p)*(a-p) - (a-n)*(a-n))
-        return cuda.cupy.array(self.Li[self.Li > self.margin].size / N, dtype=a[0].dtype),
+        return (self.Li < self.margin).sum() / a.size,
 
 
 def triplet_accuracy(x0, x1, x2):
