@@ -45,9 +45,6 @@ class TripletLoss(function.Function):
         # NOTE
         a, p, n = inputs  # anchor, positive, negative
         N = a.shape[0]
-        # TODO
-        # import pdb; pdb.set_trace()
-
         coeff = gy[0] * gy[0].dtype.type(2. / self.Li.shape[0])
         gx0 = coeff * self.Li * (n - p)
         gx1 = coeff * self.Li * (p - a)
@@ -87,10 +84,7 @@ class TripletAccuracy(function.Function):
         a, p, n = inputs  # anchor, positive, negative
         N = a.shape[0]
         self.Li = np.maximum(0, (a-p)*(a-p) - (a-n)*(a-n))
-        # import pdb; pdb.set_trace()
-
         return np.array(self.Li[self.Li > self.margin].size / a.size, dtype=a[0].dtype),
-        # return np.array(np.sum(self.Li) / N, dtype=a[0].dtype),
 
     def forward_gpu(self, inputs):
         a, p, n = inputs  # anchor, positive, negative
