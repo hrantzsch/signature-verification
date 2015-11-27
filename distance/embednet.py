@@ -34,6 +34,25 @@ class EmbedNet(chainer.Chain):
 
             embed=L.EmbedID(self.embed_size, 128)  # openface uses 128 dimensions
         )
+        self._train = True
+
+    @property
+    def train(self):
+        return self._train
+
+    @train.setter
+    def train(self, value):
+        self._train = value
+        self.inc3a.train = value
+        self.inc3b.train = value
+        self.inc3c.train = value
+        self.inc4a.train = value
+        self.inc4b.train = value
+        self.inc4c.train = value
+        self.inc4d.train = value
+        self.inc4e.train = value
+        self.inc5a.train = value
+        self.inc5b.train = value
 
     def forward_dnn(self, x):
         """Forward a batch images through the network"""

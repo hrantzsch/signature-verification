@@ -23,6 +23,22 @@ def train_test_anchors(test_fraction, num_classes=10):
     return list(range(1, num_classes+1))[:t], list(range(1, num_classes+1))[-t:]
 
 
+def run_batch(model, optimizer, dl, anchor_id, train=True):
+    model.train = train
+    volatile = 'off' if model.train else 'on'
+    x = chainer.Variable(dl.get_batch(i, batch_triplets), volatile=volatile)
+    optimizer.update(model, x, train=train)
+
+
+def write_graph(loss):
+    with open("graph.dot", "w") as o:
+        o.write(c.build_computational_graph((loss, )).dump())
+    with open("graph.wo_split.dot", "w") as o:
+        g = c.build_computational_graph((loss, ), remove_split=True)
+        o.write(g.dump())
+    print('graph generated')
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument('data', help='Path to training data')
 parser.add_argument('--batchsize', '-b', type=int, default=12,
@@ -68,10 +84,9 @@ if args.resume:
     serializers.load_hdf5(args.resume, optimizer)
 
 
-graph_generated = False
-
 train, test = train_test_anchors(args.test)
 
+graph_generated = False
 for epoch in range(1, args.epoch + 1):
     print('epoch', epoch)
 
@@ -81,21 +96,13 @@ for epoch in range(1, args.epoch + 1):
     iteration = 0
     for i in train:
         iteration += 1
-        x = chainer.Variable(dl.get_batch(i, batch_triplets))
 
-        optimizer.update(model, x, train=True)
-
+        run_batch(model, optimizer, dl, i, train=True)
         print("iteration {:04d}: loss {}".format(iteration, float(model.loss.data)), end='\r')
 
         if not graph_generated:
-            with open("graph.dot", "w") as o:
-                o.write(c.build_computational_graph((model.loss, )).dump())
-            with open("graph.wo_split.dot", "w") as o:
-                g = c.build_computational_graph((model.loss, ),
-                                                remove_split=True)
-                o.write(g.dump())
+            write_graph(model.loss)
             graph_generated = True
-            print('graph generated')
 
         sum_loss += float(model.loss.data)
 
