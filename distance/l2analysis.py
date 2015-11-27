@@ -11,7 +11,7 @@ from scipy.misc import imread
 import chainer
 from chainer import cuda
 
-from models import EmbedNet
+from embednet import EmbedNet
 from data_loader import DataLoader
 from l2normalization import l2_normalization
 
@@ -29,7 +29,7 @@ if args.params is not None:
 
 
 def min_max(x_data):
-    x = chainer.Variable(x_data, volatile=True)
+    x = chainer.Variable(x_data)
     h = model.forward_dnn(x)
     h = l2_normalization(h)
     # import pdb; pdb.set_trace()
