@@ -24,10 +24,12 @@ def train_test_anchors(test_fraction, num_classes=10):
 
 
 def run_batch(model, optimizer, dl, anchor_id, train=True):
-    model.train = train
     volatile = 'off' if model.train else 'on'
-    x = chainer.Variable(dl.get_batch(i, batch_triplets), volatile=volatile)
-    optimizer.update(model, x, train=train)
+    x = chainer.Variable(dl.get_batch(i, batch_triplets))
+    if train:
+        optimizer.update(model, x)
+    else:
+        model(x, compute_acc=True)
 
 
 def write_graph(loss):
@@ -96,34 +98,31 @@ for epoch in range(1, args.epoch + 1):
     iteration = 0
     for i in train:
         iteration += 1
-
         run_batch(model, optimizer, dl, i, train=True)
-        print("iteration {:04d}: loss {}".format(iteration, float(model.loss.data)), end='\r')
+        print("iteration {:04d}: loss {}".format(
+            iteration, float(model.loss.data)), end='\r')
+        sum_loss += float(model.loss.data)
 
         if not graph_generated:
             write_graph(model.loss)
             graph_generated = True
-
-        sum_loss += float(model.loss.data)
 
     print('train mean loss={}'.format(sum_loss / iteration))
 
     if epoch % args.interval == 0:
         make_snapshot(model, optimizer, epoch, args.out)
 
+    # testing
+    sum_accuracy = 0
+    sum_loss = 0
+    iteration = 0
+    for i in test:
+        iteration += 1
+        run_batch(model, optimizer, dl, i, train=False)
 
-    # sum_accuracy = 0
-    # sum_loss = 0
-    # for i in range(N_test, N, batchsize):
-    #     # x_batch = xp.asarray(data[i:i + batchsize])
-    #     # y_batch = xp.asarray(labels[i:i + batchsize])
-    #     x_batch = np.asarray(data[i:i+batchsize])
-    #     y_batch = np.asarray(labels[i:i+batchsize])
-    #
-    #     loss, acc = forward(x_batch, y_batch, train=False)
-    #
-    #     sum_loss += float(loss.data) * len(y_batch)
-    #     sum_accuracy += float(acc.data) * len(y_batch)
-    #
-    # print('test  mean loss={}, accuracy={}'.format(
-    #     sum_loss / N_test, sum_accuracy / N_test))
+        sum_loss += float(model.loss.data)
+        # sum_accuracy += float(model.accuracy.data)
+        sum_accuracy += 0
+
+    print('test mean loss={}, accuracy={}'.format(
+        sum_loss / iteration, sum_accuracy / iteration))
