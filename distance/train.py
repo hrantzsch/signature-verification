@@ -28,6 +28,8 @@ parser.add_argument('--initmodel', '-m', default='',
                     help='Initialize the model from given file')
 parser.add_argument('--resume', '-r', default='',
                     help='Resume the optimization from snapshot')
+parser.add_argument('--test', '-t', default=0.1, type=float,
+                    help='Fraction of samples to spare for testing (0.1)')
 args = parser.parse_args()
 
 if args.gpu >= 0:
@@ -43,6 +45,11 @@ def make_snapshot(model, optimizer, epoch, name):
     serializers.save_hdf5('{}_{}.model'.format(name, epoch), model)
     serializers.save_hdf5('{}_{}.state'.format(name, epoch), optimizer)
     print("snapshot created")
+
+
+def train_test_anchors(test_fraction, num_classes=10):
+    t = int(num_classes * test_fraction)
+    return list(range(1, num_classes+1))[:t], list(range(1, num_classes+1))[-t:]
 
 
 # model setup
@@ -63,16 +70,16 @@ if args.resume:
 
 graph_generated = False
 
+train, test = train_test_anchors(args.test)
+
 for epoch in range(1, args.epoch + 1):
     print('epoch', epoch)
 
     # training
-    anchors = list(range(1, 4001))
-    np.random.shuffle(anchors)
-
+    np.random.shuffle(train)
     sum_loss = 0
     iteration = 0
-    for i in anchors:
+    for i in train:
         iteration += 1
         x = chainer.Variable(dl.get_batch(i, batch_triplets))
 
