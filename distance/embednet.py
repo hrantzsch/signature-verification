@@ -4,7 +4,7 @@ import chainer.links as L
 
 import numpy as np
 
-from tripletloss import triplet_loss
+from tripletloss import triplet_loss, triplet_accuracy
 from l2normalization import l2_normalization
 
 
@@ -115,7 +115,7 @@ class EmbedNet(chainer.Chain):
         # compute loss
         self.loss = triplet_loss(anc, pos, neg)
         if compute_acc:
-            self.accuracy = 0
+            self.accuracy = triplet_accuracy(anc, pos, neg)
 
         return self.loss
 

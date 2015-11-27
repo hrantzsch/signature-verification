@@ -122,7 +122,7 @@ for epoch in range(1, args.epoch + 1):
 
         sum_loss += float(model.loss.data)
         # sum_accuracy += float(model.accuracy.data)
-        sum_accuracy += 0
+        sum_accuracy += float(model.accuracy.data)
 
     print('test mean loss={}, accuracy={}'.format(
         sum_loss / iteration, sum_accuracy / iteration))
