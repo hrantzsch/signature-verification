@@ -83,13 +83,13 @@ class TripletAccuracy(function.Function):
         a, p, n = inputs  # anchor, positive, negative
         N = a.shape[0]
         self.Li = (a-p)*(a-p) + self.margin - (a-n)*(a-n)
-        return np.array(self.Li[self.Li >= 0].size / a.size, dtype=a[0].dtype),
+        return np.array(self.Li[self.Li < 0].size / a.size, dtype=a[0].dtype),
 
     def forward_gpu(self, inputs):
         a, p, n = inputs  # anchor, positive, negative
         N = a.shape[0]
         self.Li = (a-p)*(a-p) + self.margin - (a-n)*(a-n)
-        return (self.Li >= 0).sum() / a.size,
+        return (self.Li < 0).sum() / a.size,
 
 
 def triplet_accuracy(x0, x1, x2):
