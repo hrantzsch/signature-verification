@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from scipy.misc import imread
+from scipy.misc import imread, imresize
 
 
 class DataLoader(object):
@@ -51,3 +51,41 @@ class DataLoader(object):
                            for _ in range(num_triplets)],
                           dtype=self.xp.float32)
         return self.xp.concatenate([a, p, n])
+
+
+class DataLoaderText:
+
+    # TODO close files
+
+    def __init__(self, text_index, nontext_index, array_module):
+        self.text_index = open(text_index, 'r')
+        self.nontext_index = open(nontext_index, 'r')
+        self.xp = array_module
+
+    def load_image(self, path):
+        img = imread(path)
+        import pdb; pdb.set_trace()
+
+        gray = img.astype(np.float32).sum(axis=-1)
+        gray /= 3.0
+
+        return imresize(gray, (96, 192))
+
+    def get_batch_part(self, size, index_file):
+        for i in range(size):
+            sample = index_file.readline()
+            print("loading ", sample)
+            yield self.load_image(sample)
+
+    def get_batch(self, num_triplets, text=True):
+        if text:
+            anchor_batch = self.get_batch_part(num_triplets, self.text_index)
+        else:
+            anchor_batch = self.get_batch_part(num_triplets, self.nontext_index)
+        text_batch = self.get_batch_part(num_triplets, self.text_index)
+        nontext_batch = self.get_batch_part(num_triplets, self.nontext_index)
+
+        if Text:
+            return self.xp.concatenate([anchor_batch, text_batch, nontext_batch])
+        else:
+            return self.xp.concatenate([anchor_batch, nontext_batch, text_batch])
