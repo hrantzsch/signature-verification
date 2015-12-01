@@ -23,15 +23,6 @@ def train_test_anchors(test_fraction, num_classes=4000):
     return list(range(1, num_classes+1))[:-t], list(range(1, num_classes+1))[-t:]
 
 
-def run_batch(model, optimizer, dl, anchor_id, batchsize, train=True):
-    volatile = 'off' if model.train else 'on'
-    x = chainer.Variable(dl.get_batch(i, batchsize))
-    if train:
-        optimizer.update(model, x)
-    else:
-        loss = model(x, compute_acc=True)
-
-
 def write_graph(loss):
     with open("graph.dot", "w") as o:
         o.write(c.build_computational_graph((loss, )).dump())
@@ -98,9 +89,12 @@ for epoch in range(1, args.epoch + 1):
     iteration = 0
     for i in train:
         iteration += 1
-        run_batch(model, optimizer, dl, i, batch_triplets, train=True)
+
+        x = chainer.Variable(dl.get_batch(i, batch_triplets))
+        optimizer.update(model, x)
+
         print("train {:04d}: loss={}".format(
-            iteration, float(model.loss.data)), end='\r')
+            iteration, float(model.loss.data)))
         sum_loss += float(model.loss.data)
 
         if not graph_generated:
@@ -118,10 +112,12 @@ for epoch in range(1, args.epoch + 1):
     iteration = 0
     for i in test:
         iteration += 1
-        run_batch(model, optimizer, dl, i, batch_triplets, train=False)
+
+        x = chainer.Variable(dl.get_batch(i, batch_triplets))
+        loss = model(x, compute_acc=True)
 
         print("test {:04d}: loss={}, accuracy={}".format(
-            iteration, float(model.loss.data), float(model.accuracy.data)), end='\r')
+            iteration, float(model.loss.data), float(model.accuracy.data)))
         sum_loss += float(model.loss.data)
         sum_accuracy += float(model.accuracy.data)
 

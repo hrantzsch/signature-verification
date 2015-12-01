@@ -2,6 +2,7 @@ import os
 import numpy as np
 from scipy.misc import imread
 
+
 class DataLoader(object):
     """A helper class for loading data from the gpds synthetic dataset"""
 
