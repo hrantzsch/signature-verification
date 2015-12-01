@@ -11,7 +11,7 @@ class TripletLoss(function.Function):
 
     """"""
 
-    def __init__(self, margin=0.2):
+    def __init__(self, margin=0.5):
         super().__init__()
         self.margin = margin
 
