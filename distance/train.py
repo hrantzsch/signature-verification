@@ -13,7 +13,7 @@ from data_loader import DataLoader
 from logger import Logger
 
 
-def train_test_anchors(test_fraction, num_classes=10):
+def train_test_anchors(test_fraction, num_classes=4000):
     t = int(num_classes * test_fraction)
     return list(range(1, num_classes+1))[:-t], list(range(1, num_classes+1))[-t:]
 

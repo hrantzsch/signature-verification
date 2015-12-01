@@ -11,7 +11,7 @@ class TripletLoss(function.Function):
 
     """"""
 
-    def __init__(self, margin=0.5):
+    def __init__(self, margin=0.6):
         super().__init__()
         self.margin = margin
 
@@ -65,7 +65,7 @@ class TripletAccuracy(function.Function):
 
     """"""
 
-    def __init__(self, margin=0.2):
+    def __init__(self, margin=0.6):
         super().__init__()
         self.margin = margin
 
