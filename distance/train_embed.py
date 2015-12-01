@@ -63,7 +63,7 @@ else:
     xp = np
 
 batch_triplets = args.batchsize  # batchsize will be 3 * batch_triplets
-dl = DataLoader(args.data, xp)
+dl = DataLoaderText('/home/hannes/text_index.txt', '/home/hannes/nontext_index.txt', xp)
 logger = Logger(args.log)
 
 
@@ -78,14 +78,17 @@ optimizer.setup(model)
 if args.initmodel and args.resume:
     logger.load_snapshot(args.initmodel, args.resume, model, optimizer)
 
-train, test = train_test_anchors(args.test)
+# train, test = train_test_anchors(args.test)
 
 graph_generated = False
 for epoch in range(1, args.epoch + 1):
     print('epoch', epoch)
 
     # training
+    train = [True] * 2000
+    train.extend([False] * 2000)
     np.random.shuffle(train)
+
     for i in train:
         x = chainer.Variable(dl.get_batch(i, batch_triplets))
         optimizer.update(model, x)
@@ -101,6 +104,9 @@ for epoch in range(1, args.epoch + 1):
         logger.make_snapshot(model, optimizer, epoch, args.out)
 
     # testing
+    test = [True] * 500
+    test.extend([False] * 500)
+    np.random.shuffle(test)
     for i in test:
         x = chainer.Variable(dl.get_batch(i, batch_triplets))
         loss = model(x, compute_acc=True)

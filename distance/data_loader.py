@@ -82,7 +82,7 @@ class DataLoaderText:
             print("loading ", sample)
             yield self.load_image(sample)
 
-    def get_batch(self, num_triplets, text=True):
+    def get_batch(self, text, num_triplets):
         if text:
             anchor_batch = self.get_batch_part(num_triplets, self.text_index)
         else:
