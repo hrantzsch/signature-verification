@@ -32,6 +32,8 @@ class EmbedNet(chainer.Chain):
             inc5b=L.InceptionBN(1024, 352, 192, 320, 192, 224, 'max', 128),
             out=L.Linear(1024, 128),
 
+            classify=L.Linear(128, 2),
+
             embed=L.EmbedID(self.embed_size, 128)  # openface uses 128 dimensions
         )
         self._train = True
@@ -84,40 +86,53 @@ class EmbedNet(chainer.Chain):
         norm = l2_normalization(x, scale=300)
         return self.embed(norm)
 
-    def __call__(self, x, compute_acc=False):
+    def __call__(self, x, t):
         """
-        Forward through DNN, L2 normalization and embedding.
-        Returns the triplet loss.
-
-        x is a batch of size 3n following the form:
-
-        | anchor_1   |
-        | [...]      |
-        | anchor_n   |
-        | positive_1 |
-        | [...]      |
-        | positive_n |
-        | negative_1 |
-        | [...]      |
-        | negative_n |
+        For debugging purposes
+        Regular classification for two classes text and nontext
         """
-
-        # The batch is forwarded through the network as a whole and then split
-        # to 3 batches of size n, which are the input for the triplet_loss
-
-        # forward batch through deep network
         h = self.forward_dnn(x)
-        h = self.forward_embed(h)
+        h = self.classify(h)
 
-        # split to anchors, positives, and negatives
-        anc, pos, neg = F.split_axis(h, 3, 0)
-
-        # compute loss
-        self.loss = triplet_loss(anc, pos, neg)
-        if compute_acc:
-            self.accuracy = triplet_accuracy(anc, pos, neg)
-
+        self.loss = F.softmax_cross_entropy(h, t)
+        self.accuracy = F.accuracy(h, t)
         return self.loss
+
+
+    # def __call__(self, x, compute_acc=False):
+    #     """
+    #     Forward through DNN, L2 normalization and embedding.
+    #     Returns the triplet loss.
+    #
+    #     x is a batch of size 3n following the form:
+    #
+    #     | anchor_1   |
+    #     | [...]      |
+    #     | anchor_n   |
+    #     | positive_1 |
+    #     | [...]      |
+    #     | positive_n |
+    #     | negative_1 |
+    #     | [...]      |
+    #     | negative_n |
+    #     """
+    #
+    #     # The batch is forwarded through the network as a whole and then split
+    #     # to 3 batches of size n, which are the input for the triplet_loss
+    #
+    #     # forward batch through deep network
+    #     h = self.forward_dnn(x)
+    #     h = self.forward_embed(h)
+    #
+    #     # split to anchors, positives, and negatives
+    #     anc, pos, neg = F.split_axis(h, 3, 0)
+    #
+    #     # compute loss
+    #     self.loss = triplet_loss(anc, pos, neg)
+    #     if compute_acc:
+    #         self.accuracy = triplet_accuracy(anc, pos, neg)
+    #
+    #     return self.loss
 
     def verify(self, x):
         """
