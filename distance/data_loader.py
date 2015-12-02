@@ -91,6 +91,5 @@ class DataLoaderText:
         return self.xp.concatenate([anchor_batch, pos_batch, neg_batch])
 
     def get_batch_mixed(self, flags):
-        batch = map(lambda flag: self.get_batch(flag, 1), flags)
-        import pdb; pdb.set_trace()
-        return self.xp.array(batch)
+        batch = list(map(lambda flag: self.get_batch(flag, 1), flags))
+        return self.xp.concatenate(batch)
