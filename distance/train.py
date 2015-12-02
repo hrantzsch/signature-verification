@@ -80,7 +80,7 @@ if args.initmodel and args.resume:
 
 # train, test = train_test_anchors(args.test)
 #
-# graph_generated = False
+graph_generated = False
 # for epoch in range(1, args.epoch + 1):
 #     print('epoch', epoch)
 #
@@ -116,11 +116,11 @@ if args.initmodel and args.resume:
 for epoch in range(1, args.epoch + 1):
     print('epoch', epoch)
 
-    for _ in range(1000):
+    for _ in range(200):
         flags = np.random.choice([True, False], size=args.batchsize)
         x_data = dl.get_batch_mixed(flags)
         x = chainer.Variable(x_data)
-        t = chainer.Variable(xp.array(flags))
+        t = chainer.Variable(xp.array(flags, dtype=xp.int32))
 
         optimizer.update(model, x, t)
         logger.log_iteration("train", float(model.loss.data))
@@ -135,11 +135,11 @@ for epoch in range(1, args.epoch + 1):
         logger.make_snapshot(model, optimizer, epoch, args.out)
 
     # testing
-    for _ in range(100):
+    for _ in range(20):
         flags = np.random.choice([True, False], size=args.batchsize)
         x_data = dl.get_batch_mixed(flags)
         x = chainer.Variable(x_data)
-        t = chainer.Variable(xp.array(flags))
+        t = chainer.Variable(xp.array(flags, dtype=xp.int32))
         loss = model(x, t)
         logger.log_iteration("test", float(model.loss.data), float(model.accuracy.data))
     logger.log_mean("test")
