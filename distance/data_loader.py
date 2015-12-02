@@ -74,15 +74,18 @@ class DataLoaderText:
                 sample = index_file.readline()[:-1]
             yield self.load_image(sample)
 
-    def get_batch(self, text, num_triplets):
-        if text:
-            anchor_batch = self.xp.array(list(self.get_batch_part(num_triplets, self.text_index)), dtype=self.xp.float32)
-        else:
-            anchor_batch = self.xp.array(list(self.get_batch_part(num_triplets, self.nontext_index)), dtype=self.xp.float32)
-        text_batch = self.xp.array(list(self.get_batch_part(num_triplets, self.text_index)), dtype=self.xp.float32)
-        nontext_batch = self.xp.array(list(self.get_batch_part(num_triplets, self.nontext_index)), dtype=self.xp.float32)
+    def get_batch(self, text, size):
+        index = self.text_index if text else self.nontext_index
+        return self.xp.array(list(self.get_batch_part(size, index)),
+                             dtype=self.xp.float32)
 
-        if text:
-            return self.xp.concatenate([anchor_batch, text_batch, nontext_batch])
-        else:
-            return self.xp.concatenate([anchor_batch, nontext_batch, text_batch])
+    def get_batch_triplets(self, text, num_triplets):
+        anchor_batch = self.get_batch(text, num_triplets, self.text_index)
+        pos_batch = self.get_batch(text, num_triplets, self.text_index)
+        neg_batch = self.get_batch(not text, num_triplets, self.text_index)
+        return self.xp.concatenate([anchor_batch, pos_batch, neg_batch])
+
+    def get_batch_mixed(self, flags):
+        batch = map(lambda flag: self.get_batch(flag, 1), flags)
+        import pdb; pdb.set_trace()
+        return self.xp.array(batch)
