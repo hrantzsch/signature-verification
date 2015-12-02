@@ -64,28 +64,25 @@ class DataLoaderText:
 
     def load_image(self, path):
         img = imread(path)
-        import pdb; pdb.set_trace()
-
-        gray = img.astype(np.float32).sum(axis=-1)
-        gray /= 3.0
-
-        return imresize(gray, (96, 192))
+        return imresize(img, (96, 192)).astype(self.xp.float32)[self.xp.newaxis, ...]
 
     def get_batch_part(self, size, index_file):
         for i in range(size):
-            sample = index_file.readline()
-            print("loading ", sample)
+            sample = index_file.readline()[:-1]
+            if not sample:
+                index_file.seek(0)
+                sample = index_file.readline()[:-1]
             yield self.load_image(sample)
 
     def get_batch(self, text, num_triplets):
         if text:
-            anchor_batch = self.get_batch_part(num_triplets, self.text_index)
+            anchor_batch = self.xp.array(list(self.get_batch_part(num_triplets, self.text_index)), dtype=self.xp.float32)
         else:
-            anchor_batch = self.get_batch_part(num_triplets, self.nontext_index)
-        text_batch = self.get_batch_part(num_triplets, self.text_index)
-        nontext_batch = self.get_batch_part(num_triplets, self.nontext_index)
+            anchor_batch = self.xp.array(list(self.get_batch_part(num_triplets, self.nontext_index)), dtype=self.xp.float32)
+        text_batch = self.xp.array(list(self.get_batch_part(num_triplets, self.text_index)), dtype=self.xp.float32)
+        nontext_batch = self.xp.array(list(self.get_batch_part(num_triplets, self.nontext_index)), dtype=self.xp.float32)
 
-        if Text:
+        if text:
             return self.xp.concatenate([anchor_batch, text_batch, nontext_batch])
         else:
             return self.xp.concatenate([anchor_batch, nontext_batch, text_batch])
