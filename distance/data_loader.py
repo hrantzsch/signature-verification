@@ -80,9 +80,9 @@ class DataLoaderText:
                              dtype=self.xp.float32)
 
     def get_batch_triplets(self, text, num_triplets):
-        anchor_batch = self.get_batch(text, num_triplets, self.text_index)
-        pos_batch = self.get_batch(text, num_triplets, self.text_index)
-        neg_batch = self.get_batch(not text, num_triplets, self.text_index)
+        anchor_batch = self.get_batch(text, num_triplets)
+        pos_batch = self.get_batch(text, num_triplets)
+        neg_batch = self.get_batch(not text, num_triplets)
         return self.xp.concatenate([anchor_batch, pos_batch, neg_batch])
 
     def get_batch_mixed(self, flags):
