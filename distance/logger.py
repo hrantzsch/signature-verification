@@ -18,9 +18,9 @@ class Logger:
 
     def load_snapshot(self, model_path, state_path, model, optimizer):
         print('Load model from', model_path)
-        serializers.load_hdf5(args.initmodel, model)
+        serializers.load_hdf5(model_path, model)
         print('Load optimizer state from', state_path)
-        serializers.load_hdf5(args.resume, optimizer)
+        serializers.load_hdf5(state_path, optimizer)
 
     def log_iteration(self, label, loss, acc=None):
         self.iteration += 1
