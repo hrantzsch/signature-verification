@@ -4,6 +4,11 @@ from chainer import function
 from chainer.utils import type_check
 from chainer import cuda
 
+#
+# Debugging
+max_val = 64000-1
+#
+
 
 class L2Normalization(function.Function):
 
@@ -36,6 +41,9 @@ class L2Normalization(function.Function):
         self.norm = cuda.cupy.zeros(N, dtype=np.int32)
         for i in range(N):
             self.norm[i] = x[i].dot(x[i]) * self.scale
+        if cuda.cupy.any(self.norm > max_val):
+            print("WARNING! value too large for embedding")
+            self.norm = cuda.cupy.minimum(max_val, self.norm)
         return self.norm,
 
     def backward(self, inputs, gy):
