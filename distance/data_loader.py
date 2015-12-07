@@ -69,7 +69,8 @@ class DataLoaderText:
 
     def load_image(self, path):
         img = imread(path)
-        return imresize(img, (96, 192)).astype(self.xp.float32)[self.xp.newaxis, ...]
+        img = imresize(img, (96, 192)).astype(self.xp.float32)[self.xp.newaxis, ...]
+        return img / 255
 
     def get_batch_part(self, size, index_file):
         for i in range(size):

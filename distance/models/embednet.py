@@ -12,7 +12,7 @@ class EmbedNet(chainer.Chain):
     """New GoogLeNet of BatchNormalization version.
        Adapted from the example provided with chainer."""
 
-    embed_size = 128000
+    # embed_size = 128000
 
     def __init__(self):
         super(EmbedNet, self).__init__(
@@ -32,9 +32,9 @@ class EmbedNet(chainer.Chain):
             inc5b=L.InceptionBN(1024, 352, 192, 320, 192, 224, 'max', 128),
             out=L.Linear(1024, 128),
 
-            classify=L.Linear(128, 2),
+            # classify=L.Linear(128, 2),
 
-            embed=L.EmbedID(self.embed_size, 128)  # openface uses 128 dimensions
+            # embed=L.EmbedID(self.embed_size, 128)  # openface uses 128 dimensions
         )
         self._train = True
 
@@ -80,11 +80,11 @@ class EmbedNet(chainer.Chain):
 
         return h
 
-    def forward_embed(self, x):
-        """Perform L2 normalizationa and embedding"""
-
-        norm = l2_normalization(x, scale=300)
-        return self.embed(norm)
+    # def forward_embed(self, x):
+    #     """Perform L2 normalizationa and embedding"""
+    #
+    #     norm = l2_normalization(x, scale=10)
+    #     return self.embed(norm)
 
     # def __call__(self, x, t):
     #     """
@@ -92,11 +92,13 @@ class EmbedNet(chainer.Chain):
     #     Regular classification for two classes text and nontext
     #     """
     #     h = self.forward_dnn(x)
-    #     h = self.classify(h)
-    #
-    #     self.loss = F.softmax_cross_entropy(h, t)
-    #     self.accuracy = F.accuracy(h, t)
-    #     return self.loss
+        # h = self.classify(h)
+        # h = self.forward_embed(h)
+        # h = self.classify(h)
+        #
+        # self.loss = F.softmax_cross_entropy(h, t)
+        # self.accuracy = F.accuracy(h, t)
+        # return self.loss
 
 
     def __call__(self, x, compute_acc=False):
@@ -122,8 +124,7 @@ class EmbedNet(chainer.Chain):
 
         # forward batch through deep network
         h = self.forward_dnn(x)
-        h = self.forward_embed(h)
-
+        # h = self.forward_embed(h)
         # split to anchors, positives, and negatives
         anc, pos, neg = F.split_axis(h, 3, 0)
 
