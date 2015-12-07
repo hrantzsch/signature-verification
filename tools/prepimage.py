@@ -1,5 +1,6 @@
 import numpy as np
 from skimage.filters import threshold_otsu
+from skimage.transform import rotate
 from scipy.misc import imresize, imsave, fromimage
 from PIL import Image
 
@@ -47,10 +48,12 @@ def crop(image, ratio):
     return image[y_min+500:y_max+500, x_min+500:x_max+500]
 
 
-def prep(image, size, aspect_ratio):
+def prep(image, size, rotation):
     """Takes a PIL Image to crop and resize it.
        Returns a np/scipy image"""
-    image = crop(fromimage(image), aspect_ratio)
+    image = fromimage(image)
+    image = rotate(image, rotation, cval=1.0)  # should I use 'nearest' instead?
+    image = crop(image, float(size[1]) / size[0])
     image = imresize(image, size, mode='L')
     return image
 
