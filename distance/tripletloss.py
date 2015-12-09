@@ -11,7 +11,7 @@ class TripletLoss(function.Function):
 
     """"""
 
-    def __init__(self, margin=0.6):
+    def __init__(self, margin=2.0):
         super().__init__()
         self.margin = margin
 
@@ -27,7 +27,6 @@ class TripletLoss(function.Function):
 
     def forward_cpu(self, inputs):
         a, p, n = inputs  # anchor, positive, negative
-        N = a.shape[0]
         # NOTE on using max(0, ...)
         # the loss is < 0 if (a-n) > (a-p)
         # that's what we want -- we don't want it increase the loss (by using
@@ -37,13 +36,14 @@ class TripletLoss(function.Function):
 
     def forward_gpu(self, inputs):
         a, p, n = inputs  # anchor, positive, negative
-        N = a.shape[0]
         self.Li = cuda.cupy.maximum(0, (a-p)*(a-p) - (a-n)*(a-n) + self.margin)
+        # if self.Li.sum() / a.size > 1:
+        # if cuda.cupy.isnan(self.Li.sum()):
+            # import pdb; pdb.set_trace()
         return self.Li.sum() / a.size,
 
     def backward(self, inputs, gy):
         a, p, n = inputs  # anchor, positive, negative
-        N = a.shape[0]
         coeff = gy[0] * gy[0].dtype.type(2. / self.Li.shape[0])
         gx0 = coeff * self.Li * (n - p)
         gx1 = coeff * self.Li * (p - a)
@@ -52,12 +52,7 @@ class TripletLoss(function.Function):
 
 
 def triplet_loss(x0, x1, x2):
-    """Triplet loss function.
-
-    #This function computes mean squared error between two variables. The mean
-    #is taken over the minibatch. Note that the error is not scaled by 1/2.
-
-    """
+    """Triplet loss function."""
     return TripletLoss()(x0, x1, x2)
 
 
@@ -65,7 +60,7 @@ class TripletAccuracy(function.Function):
 
     """"""
 
-    def __init__(self, margin=0.6):
+    def __init__(self, margin=2.0):
         super().__init__()
         self.margin = margin
 
@@ -93,10 +88,5 @@ class TripletAccuracy(function.Function):
 
 
 def triplet_accuracy(x0, x1, x2):
-    """Triplet loss function.
-
-    #This function computes mean squared error between two variables. The mean
-    #is taken over the minibatch. Note that the error is not scaled by 1/2.
-
-    """
+    """Triplet loss function."""
     return TripletAccuracy()(x0, x1, x2)

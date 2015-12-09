@@ -4,6 +4,7 @@ import pickle
 import argparse
 
 import chainer
+import chainer.links as L
 from chainer import optimizers
 from chainer import computational_graph as c
 
@@ -66,31 +67,31 @@ batch_triplets = args.batchsize  # batchsize will be 3 * batch_triplets
 dl = DataLoaderText('/home/hannes/text_index.txt', '/home/hannes/nontext_index.txt', xp)
 logger = Logger(args.log)
 
-
 # model setup
 model = EmbedNet()
+
 if args.gpu >= 0:
     model.to_gpu(args.gpu)
 
-optimizer = optimizers.SGD()
+optimizer = optimizers.AdaGrad()
 optimizer.setup(model)
 
 if args.initmodel and args.resume:
     logger.load_snapshot(args.initmodel, args.resume, model, optimizer)
 
-# train, test = train_test_anchors(args.test)
+train, test = train_test_anchors(args.test)
 
 graph_generated = False
 for epoch in range(1, args.epoch + 1):
     print('epoch', epoch)
 
     # training
-    train = [True] * 2000
-    train.extend([False] * 2000)
+    train = [True] * 1000
+    train.extend([False] * 1000)
     np.random.shuffle(train)
 
     for i in train:
-        x = chainer.Variable(dl.get_batch(i, batch_triplets))
+        x = chainer.Variable(dl.get_batch_triplets(i, batch_triplets))
         optimizer.update(model, x)
         logger.log_iteration("train", float(model.loss.data))
 
@@ -104,11 +105,11 @@ for epoch in range(1, args.epoch + 1):
         logger.make_snapshot(model, optimizer, epoch, args.out)
 
     # testing
-    test = [True] * 500
-    test.extend([False] * 500)
+    test = [True] * 100
+    test.extend([False] * 100)
     np.random.shuffle(test)
     for i in test:
-        x = chainer.Variable(dl.get_batch(i, batch_triplets))
+        x = chainer.Variable(dl.get_batch_triplets(i, batch_triplets))
         loss = model(x, compute_acc=True)
         logger.log_iteration("test", float(model.loss.data), float(model.accuracy.data))
     logger.log_mean("test")
