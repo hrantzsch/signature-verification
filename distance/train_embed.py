@@ -9,8 +9,8 @@ from chainer import optimizers
 from chainer import computational_graph as c
 
 from tripletloss import triplet_loss
-from models.embednet import EmbedNet
-from data_loader import DataLoader
+from embednet import EmbedNet
+from data_loader import DataLoader, DataLoaderText
 from logger import Logger
 
 
