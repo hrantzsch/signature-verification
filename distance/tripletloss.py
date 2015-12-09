@@ -7,11 +7,14 @@ from chainer.utils import type_check
 from chainer import cuda
 
 
+_triplet_margin = 0.6
+
+
 class TripletLoss(function.Function):
 
     """"""
 
-    def __init__(self, margin=0.6):
+    def __init__(self, margin):
         super().__init__()
         self.margin = margin
 
@@ -58,14 +61,14 @@ def triplet_loss(x0, x1, x2):
     #is taken over the minibatch. Note that the error is not scaled by 1/2.
 
     """
-    return TripletLoss()(x0, x1, x2)
+    return TripletLoss(_triplet_margin)(x0, x1, x2)
 
 
 class TripletAccuracy(function.Function):
 
     """"""
 
-    def __init__(self, margin=0.6):
+    def __init__(self, margin):
         super().__init__()
         self.margin = margin
 
@@ -99,4 +102,4 @@ def triplet_accuracy(x0, x1, x2):
     #is taken over the minibatch. Note that the error is not scaled by 1/2.
 
     """
-    return TripletAccuracy()(x0, x1, x2)
+    return TripletAccuracy(_triplet_margin)(x0, x1, x2)
