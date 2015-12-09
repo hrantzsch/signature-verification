@@ -28,9 +28,14 @@ def min_max(image):
     return (x_min, x_max), (y_min, y_max)
 
 
-def crop(image, ratio):
+def binarize(image):
     thresh = threshold_otsu(image)
     binary = image <= thresh
+    return binary
+
+
+def crop(image, ratio):
+    binary = binarize(image)
 
     (x_min, x_max), (y_min, y_max) = min_max(binary)
     src_w, src_h = x_max-x_min, y_max-y_min
