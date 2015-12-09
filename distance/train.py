@@ -6,9 +6,11 @@ import argparse
 import chainer
 from chainer import optimizers
 from chainer import computational_graph as c
+from chainer import links as L
 
 from tripletloss import triplet_loss
 from models.tripletnet import TripletNet
+from models.embednet import EmbedNet
 from data_loader import DataLoader
 from logger import Logger
 
@@ -68,7 +70,7 @@ logger = Logger(args.log)
 
 
 # model setup
-model = TripletNet()
+model = EmbedNet()
 if args.gpu >= 0:
     model.to_gpu(args.gpu)
 
@@ -78,10 +80,9 @@ optimizer.setup(model)
 if args.initmodel and args.resume:
     logger.load_snapshot(args.initmodel, args.resume, model, optimizer)
 
-# import chainer.links as L
-# model.out = L.Linear(1024, 128)
-# if args.gpu >= 0:
-#     model.to_gpu(args.gpu)
+# clear Linear layer
+model.out = L.Linear(1024, 128)
+optimizer.prepare()
 
 train, test = train_test_anchors(args.test, num_classes=dl.num_classes)
 
@@ -103,7 +104,7 @@ for _ in range(1, args.epoch + 1):
 
     logger.log_mean("train")
 
-    if optimizer.epoch % 10 == 0:
+    if optimizer.epoch % 15 == 0:
         optimizer.lr *= 0.5
         print("learning rate decreased to {}".format(optimizer.lr))
     if optimizer.epoch % args.interval == 0:
