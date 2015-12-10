@@ -4,18 +4,21 @@ Images are scaled to 192x96;
 Paper-like backgrounds are added
 """
 
+import argparse
 import numpy as np
 from scipy.misc import imread, imresize, imshow, imsave
 from PIL import Image
 import os
+from skimage.transform import rotate
+import time
 
 import prepimage
 
 
-def load_backgrounds(folder="/home/hannes/Data/paper_bg"):
+def load_backgrounds(folder):
     """read image file and convert to grayscale"""
     return [np.dot(imread(os.path.join(folder, bg_file))[..., :3], [0.299, 0.587, 0.144])
-            for bg_file in os.listdir(folder) if '.jpg' in bg_file]
+            for bg_file in os.listdir(folder) if '.jpg' in bg_file or '.png' in bg_file]
 
 
 def get_background(img, size):
@@ -39,18 +42,48 @@ def get_roi(image, pad=20):
     return roiy, roix
 
 
+def process_signature(sig_path):
+    sig = imread(sig_path).astype(np.float32) / 255.0
+    sig = rotate(sig, np.random.randint(-25, 25), cval=1.0, resize=True)
+
+    roiy, roix = get_roi(sig)
+    shape = (roiy[1] - roiy[0], roix[1] - roix[0])
+    bg = get_background(np.random.choice(backgrounds), shape).astype(np.float32) / 255.0
+
+    img = bg + sig[roiy[0]:roiy[1], roix[0]:roix[1]]
+    img = imresize(img, target_size, mode='L').astype(np.float32)
+    img *= 1.0/img.max()
+    # return np.minimum(img, 1.0)
+    return img
+
+
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('signatures',
+                        help='Path to extracted GPDS data')
+    parser.add_argument('backgrounds',
+                        help='Path to background files (jpg or png)')
+    parser.add_argument('--out', '-o', default='images',
+                        help='Path to save output images')
+    parser.add_argument('--start', '-s', default=1, type=int,
+                        help='User to start with (for resumes)')
+    args = parser.parse_args()
+
     target_size = (96, 192)
-    signatures = list(get_signatures("/home/hannes/Data/firmasSINTESISmanuscritas/"))
-    backgrounds = load_backgrounds()
+    # signatures = list(get_signatures(args.signatures))
+    backgrounds = load_backgrounds(args.backgrounds)
+    print("Loaded {} backgrounds".format(len(backgrounds)))
 
-    for i in range(50):
-        sig_file = np.random.choice(signatures)
-        sig = imread(sig_file)
-        roiy, roix = get_roi(sig)
-        shape = (roiy[1] - roiy[0], roix[1] - roix[0])
-        bg = get_background(np.random.choice(backgrounds), shape)
-
-        img = np.minimum(bg, sig[roiy[0]:roiy[1], roix[0]:roix[1]])
-        img = imresize(img, target_size, mode='L')
-        imsave("/home/hannes/tmp/images/{}.png".format(os.path.basename(sig_file)), img)
+    for user in range(args.start, 4001):
+        user_str = "{:03d}".format(user)
+        print("processing user " + user_str)
+        os.makedirs(os.path.join(args.out, user_str), exist_ok=True)
+        count = 0
+        start = time.clock()
+        for sig in get_signatures(os.path.join(args.signatures, user_str)):
+            fname, _ = os.path.splitext(os.path.basename(sig))
+            for i in range(1, 21):
+                outname = os.path.join(args.out, user_str, "{}-{:02d}.png".format(fname, i))
+                imsave(outname, process_signature(sig), 'png')
+                count += 1
+        print("{} images in {:3f} sec".format(count, time.clock() - start))
