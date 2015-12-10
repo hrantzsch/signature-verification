@@ -72,5 +72,5 @@ class LabelDataLoader(DataLoader):
         """Return two batches data, labels."""
         data = self.xp.array([self.load_image(user, sample)
                               for (user, sample) in tuples], dtype=self.xp.float32)
-        labels = self.xp.array([user for (user, _) in tuples], dtype=self.xp.float32)
+        labels = self.xp.array([user for (user, _) in tuples], dtype=self.xp.int32)
         return data, labels
