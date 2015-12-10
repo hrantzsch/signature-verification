@@ -81,8 +81,10 @@ if args.initmodel and args.resume:
     logger.load_snapshot(args.initmodel, args.resume, model, optimizer)
 
 # clear Linear layer
-model.out = L.Linear(1024, 128)
-optimizer.prepare()
+# model.out = L.Linear(1024, 128)
+# if args.gpu >= 0:
+#     model.to_gpu(args.gpu)
+# optimizer.prepare()
 
 train, test = train_test_anchors(args.test, num_classes=dl.num_classes)
 
