@@ -3,17 +3,12 @@ import numpy as np
 from scipy.misc import imread
 
 
-class TripletLoader(object):
+class DataLoader(object):
     """A helper class for loading data from the gpds synthetic dataset"""
 
-    def __init__(self, data_dir, array_module, num_classes=4000, skilled_forgeries=False):
-        # skilled_forgeries parameter indicates whether or not the classifier should try
-        # to distinguish skilled forgeries from original signatures. If false we only try
-        # to distinguish different people (random forgeries).
+    def __init__(self, data_dir, array_module):
         self.data_dir = data_dir
         self.xp = array_module
-        self.num_classes = num_classes
-        self.skilled_forgeries = skilled_forgeries
 
     def get_signature_path(self, person, sign_num):
         directory = os.path.join(self.data_dir, "{:03d}".format(person))
@@ -28,6 +23,16 @@ class TripletLoader(object):
     def load_image(self, person, sign_num):
         path = self.get_signature_path(person, sign_num)
         return imread(path).astype(self.xp.float32)[self.xp.newaxis, ...]
+
+
+class TripletLoader(DataLoader):
+
+    def __init__(self, data_dir, array_module, num_classes=4000, skilled_forgeries=False):
+        super().__init__(data_dir, array_module)
+        # skilled_forgeries parameter indicates whether or not skilled
+        # forgeries are allowed to be anchor and positive samples.
+        self.num_classes = num_classes
+        self.skilled_forgeries = skilled_forgeries
 
     def get_batch(self, anchor_id, num_triplets):
         """Make a batch using person <anchor_id> as anchor."""
