@@ -4,7 +4,10 @@ from scipy.misc import imread
 
 
 class DataLoader(object):
-    """A helper class for loading data from the gpds synthetic dataset"""
+    """
+    A helper class for loading data. Data directories should be organized
+    analogously to the gpds synthetic dataset.
+    """
 
     def __init__(self, data_dir, array_module):
         self.data_dir = data_dir
@@ -61,3 +64,13 @@ class TripletLoader(DataLoader):
                            for _ in range(num_triplets)],
                           dtype=self.xp.float32)
         return self.xp.concatenate([a, p, n])
+
+
+class LabelDataLoader(DataLoader):
+
+    def get_batch(self, tuples):
+        """Return two batches data, labels."""
+        data = self.xp.array([self.load_image(user, sample)
+                              for (user, sample) in tuples], dtype=self.xp.float32)
+        labels = self.xp.array([user for (user, _) in tuples], dtype=self.xp.float32)
+        return data, labels
