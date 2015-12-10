@@ -3,7 +3,7 @@ import numpy as np
 from scipy.misc import imread
 
 
-class DataLoader(object):
+class TripletLoader(object):
     """A helper class for loading data from the gpds synthetic dataset"""
 
     def __init__(self, data_dir, array_module, num_classes=4000, skilled_forgeries=False):

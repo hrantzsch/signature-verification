@@ -11,7 +11,7 @@ from chainer import links as L
 from tripletloss import triplet_loss
 from models.tripletnet import TripletNet
 from models.embednet import EmbedNet
-from data_loader import DataLoader
+from data_loader import TripletLoader
 from logger import Logger
 
 
@@ -65,7 +65,7 @@ else:
     xp = np
 
 batch_triplets = args.batchsize  # batchsize will be 3 * batch_triplets
-dl = DataLoader(args.data, xp, num_classes=4000)
+dl = TripletLoader(args.data, xp, num_classes=4000)
 logger = Logger(args.log)
 
 
