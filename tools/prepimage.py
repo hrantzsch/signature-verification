@@ -22,7 +22,7 @@ def _find_max(image, row):
 def min_max(image):
     y_min = _find_min(image)
     y_max = _find_max(image, image.shape[0]-1)
-    img_rot = np.rot90(image)
+    img_rot = np.rot90(image, k=3)
     x_min = _find_min(img_rot)
     x_max = _find_max(img_rot, img_rot.shape[0]-1)
     return (x_min, x_max), (y_min, y_max)
