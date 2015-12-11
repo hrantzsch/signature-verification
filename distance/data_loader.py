@@ -9,22 +9,26 @@ class DataLoader(object):
     analogously to the gpds synthetic dataset.
     """
 
-    def __init__(self, data_dir, array_module):
+    def __init__(self, data_dir, array_module, image_ext='.jpg'):
         self.data_dir = data_dir
         self.xp = array_module
+        self.image_ext = image_ext
 
-    def get_signature_path(self, person, sign_num):
+    def get_signature_path(self, person, sign_num, sample):
+        """Assemble a filename for a signature like 'cf-001-18-05.png' and
+           return the full path to the signature image."""
         directory = os.path.join(self.data_dir, "{:03d}".format(person))
         if sign_num > 24:  # a forgery
             prefix = "cf"
             sign_num -= 24
         else:
             prefix = "c"
-        fname = "{}-{:03d}-{:02d}.jpg".format(prefix, person, sign_num)
+        fname = "{}-{:03d}-{:02d}-{:02d}{}".format(
+            prefix, person, sign_num, sample, self.image_ext)
         return os.path.join(directory, fname)
 
-    def load_image(self, person, sign_num):
-        path = self.get_signature_path(person, sign_num)
+    def load_image(self, person, sign_num, sample):
+        path = self.get_signature_path(person, sign_num, sample)
         return imread(path).astype(self.xp.float32)[self.xp.newaxis, ...]
 
 
@@ -70,7 +74,12 @@ class LabelDataLoader(DataLoader):
 
     def get_batch(self, tuples):
         """Return two batches data, labels."""
-        data = self.xp.array([self.load_image(user, sample)
-                              for (user, sample) in tuples], dtype=self.xp.float32)
-        labels = self.xp.array([user for (user, _) in tuples], dtype=self.xp.int32)
+        # import pdb; pdb.set_trace()
+
+        data = self.xp.array([self.load_image(user, sign_num, sample)
+                              for (user, sign_num, sample) in tuples],
+                             dtype=self.xp.float32)
+        # NOTE: need to decrement user id for the labels, as
+        # softmax_cross_entropy expects the first user to be 0
+        labels = self.xp.array([user-1 for (user, _, _) in tuples], dtype=self.xp.int32)
         return data, labels

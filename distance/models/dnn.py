@@ -27,7 +27,7 @@ class DnnComponent(chainer.Chain):
             inc4e=L.InceptionBN(576, 0, 128, 192, 192, 256, 'max', stride=2),
             inc5a=L.InceptionBN(1024, 352, 192, 320, 160, 224, 'avg', 128),
             inc5b=L.InceptionBN(1024, 352, 192, 320, 192, 224, 'max', 128),
-            out=L.Linear(1024, 128),
+            out=L.Linear(1024, 40),
         )
         self._train = True
 

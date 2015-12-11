@@ -14,9 +14,16 @@ from data_loader import LabelDataLoader
 from logger import Logger
 
 
-def train_test_anchors(test_fraction, num_classes):
-    t = int(num_classes * test_fraction)
-    return list(range(1, num_classes+1))[:-t], list(range(1, num_classes+1))[-t:]
+def train_test_set(test_fraction, num_users):
+    sign_per_user = 54
+    sample_per_sign = 20
+    t = int(test_fraction * num_users * sign_per_user * sample_per_sign)
+    data = [(user, sign, sample)
+            for user in range(1, num_users + 1)
+            for sign in range(1, sign_per_user + 1)
+            for sample in range(1, sample_per_sign + 1)]
+    np.random.shuffle(data)
+    return data[:-t], data[-t:]
 
 
 def write_graph(loss):
@@ -63,11 +70,11 @@ if args.gpu >= 0:
 else:
     xp = np
 
-dl = LabelDataLoader(args.data, xp)
+dl = LabelDataLoader(args.data, xp, image_ext='.png')
 logger = Logger(args.log)
 
 net = DnnComponent()
-net.add_link('classify', L.Linear(128, 2))
+# net.add_link('classify', L.Linear(1024, 200))
 model = L.Classifier(net)
 
 
@@ -80,9 +87,7 @@ optimizer.setup(model)
 if args.initmodel and args.resume:
     logger.load_snapshot(args.initmodel, args.resume, model, optimizer)
 
-train, test = train_test_anchors(args.test, num_classes=120)
-train_set = [(t, i) for t in train for i in range(1, 55)]
-test_set = [(t, i) for t in test for i in range(1, 55)]
+train_set, test_set = train_test_set(args.test, num_users=40)
 
 graph_generated = False
 for _ in range(1, args.epoch + 1):
@@ -95,6 +100,7 @@ for _ in range(1, args.epoch + 1):
         x_data, t_data = dl.get_batch(train_set[i:i+args.batchsize])
         x = chainer.Variable(x_data)
         t = chainer.Variable(t_data)
+
         optimizer.update(model, x, t)
         logger.log_iteration("train", float(model.loss.data), float(model.accuracy.data))
 
@@ -104,7 +110,7 @@ for _ in range(1, args.epoch + 1):
 
     logger.log_mean("train")
 
-    if optimizer.epoch % 15 == 0:
+    if optimizer.epoch % 5 == 0:
         optimizer.lr *= 0.5
         print("learning rate decreased to {}".format(optimizer.lr))
     if optimizer.epoch % args.interval == 0:
