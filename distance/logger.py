@@ -25,21 +25,21 @@ class Logger:
     def log_iteration(self, label, loss, acc=None):
         self.iteration += 1
 
-        print("{} {:04d}:\tloss={}".format(label, self.iteration, loss),
-              end='' if acc else '\r')
+        print("{} {:04d}:\tloss={:.4f}".format(label, self.iteration, loss),
+              end='' if acc is not None else '\r')
         self.sum_loss += loss
         if acc is not None:
-            print(", acc={}".format(acc), end='\r')
+            print(", acc={:.3%}".format(acc), end='\r')
             self.sum_acc += acc
 
         if self.log_file is not None:
             self.write_iteration(label, loss, acc)
 
     def log_mean(self, label):
-        print("{} mean\tloss={}".format(label, self.sum_loss / self.iteration),
+        print("{} mean\tloss={:.4f}".format(label, self.sum_loss / self.iteration),
               end='' if self.sum_acc > 0 else '\n')
         if self.sum_acc > 0:
-            print(", acc={}".format(self.sum_acc / self.iteration))
+            print(", acc={:.3%}".format(self.sum_acc / self.iteration))
         self.iteration = 0
         self.sum_loss = 0
         self.sum_acc = 0
