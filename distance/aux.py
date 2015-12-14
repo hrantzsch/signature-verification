@@ -2,6 +2,7 @@
 Various auxilary methods
 """
 import argparse
+import numpy as np
 from chainer import computational_graph as c
 
 
@@ -41,3 +42,15 @@ def get_args():
                         help='Resume the optimization from snapshot')
 
     return parser.parse_args()
+
+
+def train_test_tuples(test_fraction, num_users):
+    sign_per_user = 54
+    sample_per_sign = 20
+    t = int(test_fraction * num_users * sign_per_user * sample_per_sign)
+    data = [(user, sign, sample)
+            for user in range(1, num_users + 1)
+            for sign in range(1, sign_per_user + 1)
+            for sample in range(1, sample_per_sign + 1)]
+    np.random.shuffle(data)
+    return data[:-t], data[-t:]
