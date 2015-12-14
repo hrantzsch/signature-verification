@@ -5,6 +5,17 @@ import chainer.links as L
 import numpy as np
 
 
+class DnnWithLinear(chainer.Chain):
+    def __init__(self, personas):
+        super(DnnWithLinear, self).__init__(
+            dnn=DnnComponent(),
+            out=L.Linear(1024, personas),
+        )
+
+    def __call__(self, x):
+        return self.out(self.dnn(x))
+
+
 class DnnComponent(chainer.Chain):
     """
     A GoogLeNet with BatchNormalization, adapted from the example provided
@@ -27,7 +38,6 @@ class DnnComponent(chainer.Chain):
             inc4e=L.InceptionBN(576, 0, 128, 192, 192, 256, 'max', stride=2),
             inc5a=L.InceptionBN(1024, 352, 192, 320, 160, 224, 'avg', 128),
             inc5b=L.InceptionBN(1024, 352, 192, 320, 192, 224, 'max', 128),
-            out=L.Linear(1024, 40),
         )
         self._train = True
 
@@ -69,4 +79,5 @@ class DnnComponent(chainer.Chain):
 
         h = self.inc5a(h)
         h = F.average_pooling_2d(self.inc5b(h), (3, 7))
-        return self.out(h)
+        return h
+        # return self.out(h)
