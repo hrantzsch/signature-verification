@@ -1,6 +1,4 @@
-import os
 import numpy as np
-import pickle
 
 import chainer
 from chainer import optimizers
@@ -8,8 +6,7 @@ from chainer import links as L
 
 import aux
 from train import train
-from tripletloss import triplet_loss
-from models.dnn import DnnWithLinear, DnnComponent
+from models.dnn import DnnWithLinear
 from data_loader import LabelDataLoader
 from logger import Logger
 
