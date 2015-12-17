@@ -49,7 +49,7 @@ def crop(image, ratio):
         x_min -= pad / 2
         x_max += pad / 2
 
-    image = np.pad(image, 500, mode='edge')  # yes, it's ugly
+    image = np.pad(image, 500, mode='maximum')  # yes, it's ugly
     return image[y_min+500:y_max+500, x_min+500:x_max+500]
 
 
