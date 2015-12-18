@@ -35,7 +35,7 @@ logger = Logger(args.log)
 
 
 # model setup
-model = EmbedNet()
+model = EmbedNet(4000*1080)
 if args.gpu >= 0:
     model.to_gpu(args.gpu)
 
@@ -44,6 +44,11 @@ optimizer.setup(model)
 
 if args.initmodel and args.resume:
     logger.load_snapshot(args.initmodel, args.resume, model, optimizer)
+elif args.initmodel:
+    print("No resume state given -- finetuning on model " + args.initmodel)
+    old_model = L.Classifier(DnnComponent())
+    serializers.load_hdf5(args.initmodel, old_model)
+    model.predictor.dnn.copyparams(old_model.predictor)
 
 train, test = train_test_anchors(args.test, num_classes=dl.num_classes)
 
@@ -65,7 +70,7 @@ for _ in range(1, args.epoch + 1):
 
     logger.log_mean("train")
 
-    if optimizer.epoch % 15 == 0:
+    if optimizer.epoch % 25 == 0:
         optimizer.lr *= 0.5
         print("learning rate decreased to {}".format(optimizer.lr))
     if optimizer.epoch % args.interval == 0:

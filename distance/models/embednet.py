@@ -4,7 +4,8 @@ import chainer.links as L
 
 import numpy as np
 
-from .dnn import DnnComponent
+from .dnn import DnnWithLinear
+from .embed_id import EmbedID
 from tripletloss import triplet_loss, triplet_accuracy
 from l2normalization import l2_normalization
 
@@ -12,10 +13,11 @@ from l2normalization import l2_normalization
 class EmbedNet(chainer.Chain):
     """"""
 
-    def __init__(self, embed_size=256000):
+    def __init__(self, embed_size):
         super(EmbedNet, self).__init__(
-            dnn=DnnComponent(),
-            embed=L.EmbedID(embed_size, 128),  # openface uses 128 dimensions
+            dnn=DnnWithLinear(128),
+            # embed=L.EmbedID(embed_size, 128),
+            embed=EmbedID(embed_size, 128),  # customized initialization
         )
         self._train = True
 
@@ -43,7 +45,7 @@ class EmbedNet(chainer.Chain):
         # forward batch through deep network
         h = self.dnn(x)
         # Perform L2 normalizationa and embedding
-        h = l2_normalization(h, scale=300)
+        h = l2_normalization(h, scale=500)
         h = self.embed(h)
 
         # split to anchors, positives, and negatives

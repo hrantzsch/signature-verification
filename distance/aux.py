@@ -54,3 +54,8 @@ def train_test_tuples(test_fraction, num_users):
             for sample in range(1, sample_per_sign + 1)]
     np.random.shuffle(data)
     return data[:-t], data[-t:]
+
+
+def train_test_anchors(test_fraction, num_classes):
+    t = int(num_classes * test_fraction)
+    return list(range(1, num_classes+1))[:-t], list(range(1, num_classes+1))[-t:]
