@@ -17,7 +17,7 @@ class EmbedNet(chainer.Chain):
         super(EmbedNet, self).__init__(
             dnn=DnnWithLinear(128),
             # embed=L.EmbedID(embed_size, 128),
-            embed=EmbedID(embed_size, 128),  # customized initialization
+            # embed=EmbedID(embed_size, 128),  # customized initialization
         )
         self._train = True
 
@@ -45,8 +45,8 @@ class EmbedNet(chainer.Chain):
         # forward batch through deep network
         h = self.dnn(x)
         # Perform L2 normalizationa and embedding
-        h = l2_normalization(h, scale=500)
-        h = self.embed(h)
+        # h = l2_normalization(h, scale=500)
+        # h = self.embed(h)
 
         # split to anchors, positives, and negatives
         anc, pos, neg = F.split_axis(h, 3, 0)

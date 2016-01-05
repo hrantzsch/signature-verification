@@ -30,7 +30,7 @@ def train(epochs, batchsize,
 
         logger.log_mean("train")
 
-        if optimizer.epoch % 5 == 0 and optimizer.lr > 0.0002:
+        if optimizer.epoch % 15 == 0 and optimizer.lr > 0.0002:
             optimizer.lr *= 0.5
             print("learning rate decreased to {}".format(optimizer.lr))
         if optimizer.epoch % snapshot_interval == 0:
