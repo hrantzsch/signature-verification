@@ -7,7 +7,7 @@ import numpy as np
 from .dnn import DnnWithLinear
 from .embed_id import EmbedID
 from tripletloss import triplet_loss, triplet_accuracy
-from l2normalization import l2_normalization
+from l2_norm_squared import l2_norm_squared
 
 
 class EmbedNet(chainer.Chain):
@@ -16,8 +16,8 @@ class EmbedNet(chainer.Chain):
     def __init__(self, embed_size):
         super(EmbedNet, self).__init__(
             dnn=DnnWithLinear(128),
-            # embed=L.EmbedID(embed_size, 128),
-            embed=EmbedID(embed_size, 128),  # customized initialization
+            embed=L.EmbedID(embed_size, 128),
+            # embed=EmbedID(embed_size, 128),  # customized initialization
         )
         self._train = True
 
@@ -45,7 +45,7 @@ class EmbedNet(chainer.Chain):
         # forward batch through deep network
         h = self.dnn(x)
         # Perform L2 normalizationa and embedding
-        h = l2_normalization(h, scale=500)
+        h = l2_norm_squared(h)
         h = self.embed(h)
 
         # split to anchors, positives, and negatives
