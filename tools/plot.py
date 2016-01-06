@@ -47,6 +47,7 @@ def plot_avg(logfile):
 
     f, axarr = plt.subplots(2, sharex=True)
     x = list(range(1, len(loss_train)+1))
+    # x = list(range(len(loss_train)))  # old style starting at epoch 0
 
     axarr[0].plot(x, list(map(avg, loss_train)), '.-')
     axarr[0].plot(x, list(map(avg, loss_test)), '.-')
@@ -72,6 +73,7 @@ def plot_mixed(logfile):
 
     f, axarr = plt.subplots(2, sharex=True)
     x = list(range(1, len(loss_train)+1))
+    # x = list(range(len(loss_train)))  # old style starting at epoch 0
 
     loss_chain = list(chain.from_iterable(loss_train))
     axarr[0].plot(loss_chain, '-')
