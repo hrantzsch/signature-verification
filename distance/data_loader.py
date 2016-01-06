@@ -9,7 +9,7 @@ class DataLoader(object):
     analogously to the gpds synthetic dataset.
     """
 
-    def __init__(self, data_dir, array_module, image_ext='.jpg'):
+    def __init__(self, data_dir, array_module, image_ext='.png'):
         self.data_dir = data_dir
         self.xp = array_module
         self.image_ext = image_ext
@@ -57,14 +57,21 @@ class TripletLoader(DataLoader):
                        for i in range(num_triplets)]
 
         # repeat anchor sample
-        a = self.xp.array([self.load_image(anchor_id, anchor_sample)] * num_triplets,
+        a = self.xp.array([self.load_image(anchor_id,
+                                           anchor_sample,
+                                           np.random.randint(0, 10))
+                           for _ in range(num_triplets)],
                           dtype=self.xp.float32)
         # generate <num_triplets> p's randomly sampled from remaining anchor_samples
-        p = self.xp.array([self.load_image(anchor_id, np.random.choice(anchor_samples))
+        p = self.xp.array([self.load_image(anchor_id,
+                                           np.random.choice(anchor_samples),
+                                           np.random.randint(0, 10))
                            for _ in range(num_triplets)],
                           dtype=self.xp.float32)
         # negative samples from remaining neg_ids
-        n = self.xp.array([self.load_image(np.random.choice(neg_ids), np.random.choice(list(range(1, 55))))
+        n = self.xp.array([self.load_image(np.random.choice(neg_ids),
+                                           np.random.choice(list(range(1, 55))),
+                                           np.random.randint(0, 10))
                            for _ in range(num_triplets)],
                           dtype=self.xp.float32)
         return self.xp.concatenate([a, p, n])
