@@ -46,6 +46,7 @@ class EmbedNet(chainer.Chain):
         h = self.dnn(x)
         # Perform L2 normalizationa and embedding
         h = l2_norm_squared(h)
+	# TODO scaling?
         h = self.embed(h)
 
         # split to anchors, positives, and negatives

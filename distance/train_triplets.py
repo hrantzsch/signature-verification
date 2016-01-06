@@ -7,11 +7,13 @@ import chainer
 from chainer import optimizers
 from chainer import computational_graph as c
 from chainer import links as L
+from chainer import serializers
 
 import aux
 from tripletloss import triplet_loss
 from models.tripletnet import TripletNet
 from models.embednet import EmbedNet
+from models.dnn import DnnComponent, DnnWithLinear
 from data_loader import TripletLoader
 from logger import Logger
 
@@ -35,7 +37,7 @@ logger = Logger(args.log)
 
 
 # model setup
-model = EmbedNet(4000*1080)
+model = EmbedNet(256000)
 if args.gpu >= 0:
     model.to_gpu(args.gpu)
 
@@ -46,9 +48,9 @@ if args.initmodel and args.resume:
     logger.load_snapshot(args.initmodel, args.resume, model, optimizer)
 elif args.initmodel:
     print("No resume state given -- finetuning on model " + args.initmodel)
-    old_model = L.Classifier(DnnComponent())
-    serializers.load_hdf5(args.initmodel, old_model)
-    model.predictor.dnn.copyparams(old_model.predictor)
+    old_model = L.Classifier(DnnWithLinear(10))  # mimic pretrained model
+    serializers.load_hdf5(args.initmodel, old_model)  # load snapshot
+    model.dnn.dnn.copyparams(old_model.predictor.dnn)  # copy DnnComponent's params
 
 train, test = train_test_anchors(args.test, num_classes=dl.num_classes)
 

@@ -13,19 +13,21 @@ from logger import Logger
 
 args = aux.get_args()
 
-NUM_USERS = 10
+NUM_USERS = 200
 
 if args.gpu >= 0:
     from chainer import cuda
     cuda.check_cuda_available()
     xp = cuda.cupy
+    cuda.get_device(1).use()
+    print("using gpu", args.gpu)
 else:
     xp = np
 
 dl = LabelDataLoader(args.data, xp, image_ext='.png')
 logger = Logger(args.log)
 
-net = DnnWithLinear(NUM_USERS)
+net = DnnWithLinear(200)
 model = L.Classifier(net)
 
 if args.gpu >= 0:
