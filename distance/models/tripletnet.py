@@ -19,7 +19,7 @@ class TripletNet(chainer.Chain):
     changeable.
     """
 
-    def __init__(self, dnn=DnnComponent):
+    def __init__(self, dnn=HofferDnn):
         super(TripletNet, self).__init__()
         # TODO accept parameters for other DNNs
         self.dnn = dnn()
@@ -45,7 +45,7 @@ class TripletNet(chainer.Chain):
         # to 3 batches of size n, which are the input for the triplet_loss
 
         # forward batch through deep network
-        # h = self.dnn(x)
+        h = self.dnn(x)
         h = x
 
         # split to anchors, positives, and negatives
