@@ -30,21 +30,10 @@ class L2DistanceSquared(function.Function):
     def forward_gpu(self, inputs):
         self.forward_cpu(inputs)  # TODO
 
-    def backward(self, inputs, gy):
-        # TODO
-        return 2 * self.y
-
-                # coeff = gy[0] * gy[0].dtype.type(2. / self.y.size)
-                # gx0 = coeff * self.y
-                # return gx0, -gx0
-                #
-                # a, p, n = inputs  # anchor, positive, negative
-                # N = a.shape[0]
-                # coeff = gy[0] * gy[0].dtype.type(2. / self.Li.shape[0])
-                # gx0 = coeff * self.Li * (n - p)
-                # gx1 = coeff * self.Li * (p - a)
-                # gx2 = coeff * self.Li * (a - n)
-                # return gx0, gx1, gx2
+    def backward(self, inputs, grad_outputs):
+        x, y = inputs
+        gw, = grad_outputs
+        return 2 * x, -2 * y,
 
 
 def l2_distance_squared(x0, x1):

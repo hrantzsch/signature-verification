@@ -7,7 +7,8 @@ import numpy as np
 
 from .hoffer_dnn import HofferDnn
 from .dnn import DnnComponent
-from distance.l2_distance_squared import l2_distance_squared
+from l2_norm_squared import l2_norm_squared
+from l2_distance_squared import l2_distance_squared
 
 
 class TripletNet(chainer.Chain):
@@ -46,15 +47,21 @@ class TripletNet(chainer.Chain):
 
         # forward batch through deep network
         h = self.dnn(x)
-        h = x
+        h = F.reshape(h, (h.data.shape[0], h.data.shape[1]))
 
         # split to anchors, positives, and negatives
         anc, pos, neg = F.split_axis(h, 3, 0)
         n = anc.data.shape[0]
 
         # compute distances of anchor to positive and negative, respectively
+        # diff_pos = anc - pos
+        # dist_pos = F.reshape(l2_norm_squared(diff_pos), (n, 1))
+        # diff_neg = anc - neg
+        # dist_neg = F.reshape(l2_norm_squared(diff_neg), (n, 1))
+
         dist_pos = F.reshape(l2_distance_squared(anc, pos), (n, 1))
         dist_neg = F.reshape(l2_distance_squared(anc, neg), (n, 1))
+
         dist = F.concat((dist_pos, dist_neg))
 
         # compute loss:
@@ -64,4 +71,5 @@ class TripletNet(chainer.Chain):
         xp = cuda.get_array_module(sm)
         zero_one = xp.array([0, 1] * n, dtype=sm.data.dtype).reshape(n, 2)
 
-        return F.mean_squared_error(sm, chainer.Variable(zero_one))
+        self.loss = F.mean_squared_error(sm, chainer.Variable(zero_one))
+        return self.loss

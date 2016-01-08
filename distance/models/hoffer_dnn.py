@@ -20,18 +20,19 @@ class HofferDnn(chainer.Chain):
 
     def __init__(self):
         super(HofferDnn, self).__init__(
-            conv1=L.Convolution2D(1, 64, 5, stride=3, pad=1, nobias=True),
-            conv2=L.Convolution2D(64, 128, 3, nobias=True),
-            conv3=L.Convolution2D(128, 256, 3, nobias=True),
-            conv4=L.Convolution2D(256, 128, 3, nobias=True),
+            conv1=L.Convolution2D(1, 64, 5, stride=3, pad=1),
+            conv2=L.Convolution2D(64, 128, 3),
+            conv3=L.Convolution2D(128, 256, 3),
+            conv4=L.Convolution2D(256, 128, (2, 3)),
+            conv5=L.Convolution2D(128, 128, 2),
         )
 
     def __call__(self, x, train=True):
-        h = F.max_pooling_2d(F.relu(self.conv1(x)), 2, (3, 2))
+        h = F.max_pooling_2d(F.relu(self.conv1(x)), (2, 3), (2, 3), (0, 1))
         h = F.dropout(h, train=train)
-        h = F.max_pooling_2d(F.relu(self.conv2(h)), 2, (3, 2))
+        h = F.max_pooling_2d(F.relu(self.conv2(h)), 2, 2, pad=(1, 0))
         h = F.dropout(h, train=train)
         h = F.max_pooling_2d(F.relu(self.conv3(h)), 2)
         h = F.dropout(h, train=train)
         h = F.relu(self.conv4(h))
-        return h
+        return F.relu(self.conv5(h))

@@ -37,7 +37,7 @@ logger = Logger(args.log)
 
 
 # model setup
-model = EmbedNet(256000)
+model = TripletNet()
 if args.gpu >= 0:
     model.to_gpu(args.gpu)
 
@@ -62,8 +62,10 @@ for _ in range(1, args.epoch + 1):
     # training
     np.random.shuffle(train)
     for i in train:
-        x = chainer.Variable(dl.get_batch(i, batch_triplets))
+        x_data = dl.get_batch(i, batch_triplets) / 255.0
+        x = chainer.Variable(x_data)
         optimizer.update(model, x)
+        # model.loss = model(x)
         logger.log_iteration("train", float(model.loss.data))
 
         if not graph_generated:
