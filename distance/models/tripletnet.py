@@ -74,6 +74,6 @@ class TripletNet(chainer.Chain):
         self.loss = F.mean_squared_error(sm, chainer.Variable(zero_one))
 
         if compute_acc:
-            self.accuracy = (float)dist_pos.data[dist_pos.data < dist_neg.data].size / dist_pos.data.size
+            self.accuracy = float(dist_pos.data[dist_pos.data < dist_neg.data].size) / dist_pos.data.size
 
         return self.loss

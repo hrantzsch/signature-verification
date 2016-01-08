@@ -4,6 +4,7 @@ import pickle
 import argparse
 
 import chainer
+from chainer import cuda
 from chainer import optimizers
 from chainer import computational_graph as c
 from chainer import links as L
@@ -25,9 +26,9 @@ def train_test_anchors(test_fraction, num_classes):
 args = aux.get_args()
 
 if args.gpu >= 0:
-    from chainer import cuda
     cuda.check_cuda_available()
     xp = cuda.cupy
+    cuda.get_device(1).use()
 else:
     xp = np
 
