@@ -34,11 +34,13 @@ class DataLoader(object):
 
 class TripletLoader(DataLoader):
 
-    def __init__(self, data_dir, array_module, num_classes=4000, skilled_forgeries=False):
-        super().__init__(data_dir, array_module)
+    def __init__(self, data_dir, array_module, num_classes=4000,
+                 skilled_forgeries=False, image_ext='.png'):
+        super().__init__(data_dir, array_module, image_ext)
         # skilled_forgeries parameter indicates whether or not skilled
         # forgeries are allowed to be anchor and positive samples.
         self.num_classes = num_classes
+        self.num_variations = 20
         self.skilled_forgeries = skilled_forgeries
 
     def get_batch(self, anchor_id, num_triplets):
@@ -49,7 +51,7 @@ class TripletLoader(DataLoader):
         # pop anchor_sample, removing it from the remaining anchor_samples
         # the variation of the anchor also needs to be fix  # TODO: why?
         anchor_sign_num = anchor_samples.pop()
-        anchor_variation = np.random.randint(1, 21)
+        anchor_variation = np.random.randint(1, self.num_variations+1)
 
         neg_ids = list(range(1, self.num_classes+1))
         neg_ids.remove(anchor_id)
@@ -65,11 +67,11 @@ class TripletLoader(DataLoader):
             num_triplets, dtype=self.xp.float32)
         # generate <num_triplets> p's randomly sampled from remaining anchor_samples
         p = self.xp.array(
-            [self.load_image(anchor_id, np.random.choice(anchor_samples), np.random.randint(1, 21))
+            [self.load_image(anchor_id, np.random.choice(anchor_samples), np.random.randint(1, self.num_variations+1))
              for _ in range(num_triplets)], dtype=self.xp.float32)
         # negative samples from remaining neg_ids
         n = self.xp.array(
-            [self.load_image(np.random.choice(neg_ids), np.random.choice(list(range(1, 55))), np.random.randint(1, 21))
+            [self.load_image(np.random.choice(neg_ids), np.random.choice(list(range(1, 55))), np.random.randint(1, self.num_variations+1))
              for _ in range(num_triplets)], dtype=self.xp.float32)
         return self.xp.concatenate([a, p, n])
 
