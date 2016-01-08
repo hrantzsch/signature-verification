@@ -32,7 +32,7 @@ else:
     xp = np
 
 batch_triplets = args.batchsize  # batchsize will be 3 * batch_triplets
-dl = TripletLoader(args.data, xp, num_classes=4000)
+dl = TripletLoader(args.data, xp, num_classes=200)
 logger = Logger(args.log)
 
 

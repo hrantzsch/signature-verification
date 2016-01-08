@@ -72,4 +72,8 @@ class TripletNet(chainer.Chain):
         zero_one = xp.array([0, 1] * n, dtype=sm.data.dtype).reshape(n, 2)
 
         self.loss = F.mean_squared_error(sm, chainer.Variable(zero_one))
+
+        if compute_acc:
+            self.accuracy = (float)dist_pos.data[dist_pos.data < dist_neg.data].size / dist_pos.data.size
+
         return self.loss
