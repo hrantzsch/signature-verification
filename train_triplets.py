@@ -1,3 +1,11 @@
+"""A script to train a triplet distance based model.
+
+This script is used to train models that expect to be fed triplets for
+training. Currently it can be used to train EmbedNet, based on the FaceNet
+paper, and TripletNet, based on Hoffer, Ailon: "Deep Metric Learning Using
+Triplet Network".
+"""
+
 import os
 import numpy as np
 import pickle
@@ -32,7 +40,7 @@ xp = cuda.cupy if args.gpu >= 0 else np
 
 
 batch_triplets = args.batchsize  # batchsize will be 3 * batch_triplets
-dl = TripletLoader(args.data, xp, num_classes=200)
+dl = TripletLoader(args.data, xp, num_classes=4000)
 logger = Logger(args.log)
 
 
@@ -66,11 +74,9 @@ for _ in range(1, args.epoch + 1):
     # training
     np.random.shuffle(train)
     for i in train:
-        x_data = dl.get_batch(i, batch_triplets)
-        # import pdb; pdb.set_trace()
+        x_data = dl.get_batch(i, batch_triplets) / 255.0
         x = chainer.Variable(x_data)
         optimizer.update(model, x)
-        # model.loss = model(x)
         logger.log_iteration("train", float(model.loss.data))
 
         if not graph_generated:

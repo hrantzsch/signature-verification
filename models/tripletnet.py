@@ -54,13 +54,13 @@ class TripletNet(chainer.Chain):
         n = anc.data.shape[0]
 
         # compute distances of anchor to positive and negative, respectively
-        # diff_pos = anc - pos
-        # dist_pos = F.reshape(l2_norm_squared(diff_pos), (n, 1))
+        # diff_pos2 = anc - pos
+        # dist_pos2 = F.reshape(l2_norm_squared(diff_pos2), (n, 1))
         # diff_neg = anc - neg
         # dist_neg = F.reshape(l2_norm_squared(diff_neg), (n, 1))
 
-        dist_pos = F.reshape(l2_distance_squared(anc, pos), (n, 1))
-        dist_neg = F.reshape(l2_distance_squared(anc, neg), (n, 1))
+        dist_pos = F.log(F.reshape(l2_distance_squared(anc, pos), (n, 1)))
+        dist_neg = F.log(F.reshape(l2_distance_squared(anc, neg), (n, 1)))
 
         dist = F.concat((dist_pos, dist_neg))
 
@@ -68,9 +68,12 @@ class TripletNet(chainer.Chain):
         # calculate softmax on distances as a ratio measure
         # loss is MSE of softmax to [0, 1] vector
         sm = F.softmax(dist)
-        xp = cuda.get_array_module(sm)
         # TODO generalize to allow gpu -- get_array_module always gives numpy
-        zero_one = cuda.cupy.array([0, 1] * n, dtype=sm.data.dtype).reshape(n, 2)
-
+        # xp = cuda.get_array_module(sm)
+        zero_one = cuda.cupy.array([0, 1] * n, dtype=dist.data.dtype).reshape(n, 2)
         self.loss = F.mean_squared_error(sm, chainer.Variable(zero_one))
+
+        # TODO compute accuracy
+        # number of positions in sm, where sm[i][0] > sm[i][1]
+
         return self.loss
