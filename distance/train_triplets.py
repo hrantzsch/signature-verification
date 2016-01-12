@@ -13,6 +13,7 @@ from chainer import serializers
 import aux
 from tripletloss import triplet_loss
 from models.tripletnet import TripletNet
+from models.hoffer_dnn import Alex, HofferDnn
 from models.embednet import EmbedNet
 from models.dnn import DnnComponent, DnnWithLinear
 from data_loader import TripletLoader
@@ -27,22 +28,24 @@ args = aux.get_args()
 
 if args.gpu >= 0:
     cuda.check_cuda_available()
-    xp = cuda.cupy
-    cuda.get_device(1).use()
-else:
-    xp = np
+xp = cuda.cupy if args.gpu >= 0 else np
+
 
 batch_triplets = args.batchsize  # batchsize will be 3 * batch_triplets
-dl = TripletLoader(args.data, xp, num_classes=200)
+dl = TripletLoader(args.data, xp, num_classes=4000)
 logger = Logger(args.log)
 
 
 # model setup
 model = TripletNet()
-if args.gpu >= 0:
-    model.to_gpu(args.gpu)
 
-optimizer = optimizers.AdaGrad(lr=0.005)
+if args.gpu >= 0:
+    print("using gpu", args.gpu)
+    cuda.get_device(args.gpu).use()
+    model = model.to_gpu()
+
+optimizer = optimizers.SGD()
+# optimizer = optimizers.AdaGrad(lr=0.005)
 optimizer.setup(model)
 
 if args.initmodel and args.resume:
@@ -63,7 +66,8 @@ for _ in range(1, args.epoch + 1):
     # training
     np.random.shuffle(train)
     for i in train:
-        x_data = dl.get_batch(i, batch_triplets) / 255.0
+        x_data = dl.get_batch(i, batch_triplets)
+        # import pdb; pdb.set_trace()
         x = chainer.Variable(x_data)
         optimizer.update(model, x)
         # model.loss = model(x)
@@ -82,8 +86,8 @@ for _ in range(1, args.epoch + 1):
         logger.make_snapshot(model, optimizer, optimizer.epoch, args.out)
 
     # testing
-    for i in test:
-        x = chainer.Variable(dl.get_batch(i, batch_triplets))
-        loss = model(x, compute_acc=True)
-        logger.log_iteration("test", float(model.loss.data), float(model.accuracy.data))
-    logger.log_mean("test")
+    # for i in test:
+    #     x = chainer.Variable(dl.get_batch(i, batch_triplets))
+    #     loss = model(x, compute_acc=True)
+    #     logger.log_iteration("test", float(model.loss.data), float(model.accuracy.data))
+    # logger.log_mean("test")

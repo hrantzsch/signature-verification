@@ -28,11 +28,15 @@ class HofferDnn(chainer.Chain):
         )
 
     def __call__(self, x, train=True):
-        h = F.max_pooling_2d(F.relu(self.conv1(x)), (2, 3), (2, 3), (0, 1))
+        h = self.conv1(x)
+        h = F.max_pooling_2d(
+            F.relu(h), (2, 3), (2, 3), (0, 1))
         h = F.dropout(h, train=train)
-        h = F.max_pooling_2d(F.relu(self.conv2(h)), 2, 2, pad=(1, 0))
+        h = F.max_pooling_2d(
+            F.relu(self.conv2(h)), 2, 2, pad=(1, 0))
         h = F.dropout(h, train=train)
-        h = F.max_pooling_2d(F.relu(self.conv3(h)), 2)
+        h = F.max_pooling_2d(
+            F.relu(self.conv3(h)), 2)
         h = F.dropout(h, train=train)
         h = F.relu(self.conv4(h))
         return F.relu(self.conv5(h))
