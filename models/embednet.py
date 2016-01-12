@@ -17,7 +17,6 @@ class EmbedNet(chainer.Chain):
         super(EmbedNet, self).__init__(
             dnn=DnnWithLinear(128),
             embed=L.EmbedID(embed_size, 128),
-            # embed=EmbedID(embed_size, 128),  # customized initialization
         )
         self._train = True
 
@@ -46,7 +45,7 @@ class EmbedNet(chainer.Chain):
         h = self.dnn(x)
         # Perform L2 normalizationa and embedding
         h = l2_norm_squared(h)
-	# TODO scaling?
+        # TODO scaling?
         h = self.embed(h)
 
         # split to anchors, positives, and negatives
