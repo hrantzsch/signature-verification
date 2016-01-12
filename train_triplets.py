@@ -10,21 +10,21 @@ from chainer import computational_graph as c
 from chainer import links as L
 from chainer import serializers
 
-import aux
-from tripletloss import triplet_loss
+from aux import helpers
+from aux.data_loader import TripletLoader
+from aux.logger import Logger
+from functions.tripletloss import triplet_loss
 from models.tripletnet import TripletNet
-from models.hoffer_dnn import Alex, HofferDnn
+from models.hoffer_dnn import HofferDnn
 from models.embednet import EmbedNet
-from models.dnn import DnnComponent, DnnWithLinear
-from data_loader import TripletLoader
-from logger import Logger
+from models.embednet_dnn import DnnComponent, DnnWithLinear
 
 
 def train_test_anchors(test_fraction, num_classes):
     t = int(num_classes * test_fraction)
     return list(range(1, num_classes+1))[:-t], list(range(1, num_classes+1))[-t:]
 
-args = aux.get_args()
+args = helpers.get_args()
 
 if args.gpu >= 0:
     cuda.check_cuda_available()
@@ -32,7 +32,7 @@ xp = cuda.cupy if args.gpu >= 0 else np
 
 
 batch_triplets = args.batchsize  # batchsize will be 3 * batch_triplets
-dl = TripletLoader(args.data, xp, num_classes=4000)
+dl = TripletLoader(args.data, xp, num_classes=200)
 logger = Logger(args.log)
 
 
@@ -74,7 +74,7 @@ for _ in range(1, args.epoch + 1):
         logger.log_iteration("train", float(model.loss.data))
 
         if not graph_generated:
-            aux.write_graph(model.loss)
+            helpers.write_graph(model.loss)
             graph_generated = True
 
     logger.log_mean("train")

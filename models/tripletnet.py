@@ -5,10 +5,10 @@ from chainer import links as L
 
 import numpy as np
 
-from .hoffer_dnn import HofferDnn
-from .dnn import DnnComponent
-from l2_norm_squared import l2_norm_squared
-from l2_distance_squared import l2_distance_squared
+from functions.l2_norm_squared import l2_norm_squared
+from functions.l2_distance_squared import l2_distance_squared
+from models.hoffer_dnn import HofferDnn
+from models.embednet_dnn import DnnComponent
 
 
 class TripletNet(chainer.Chain):

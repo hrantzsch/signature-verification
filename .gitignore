@@ -68,6 +68,8 @@ target/
 
 ### Other ###
 venv
+backup
+data
 *.dot
 *.pkl
 *.png

@@ -5,16 +5,16 @@ from chainer import optimizers
 from chainer import links as L
 from chainer import serializers
 
-import aux
-from train import train
-from models.dnn import DnnWithLinear, DnnComponent
-from data_loader import LabelDataLoader
-from logger import Logger
+from aux import helpers
+from aux.data_loader import LabelDataLoader
+from aux.logger import Logger
+from aux.train import train
+from models.embednet_dnn import DnnWithLinear, DnnComponent
 
 NUM_PERSONAS_PRETRAINED = 40
 NUM_PERSONAS = 50
 
-args = aux.get_args()
+args = helpers.get_args()
 
 if args.gpu >= 0:
     from chainer import cuda
@@ -48,7 +48,7 @@ else:
     print("Please provide a pretrained model using -m")
     exit(1)
 
-train_set, test_set = aux.train_test_tuples(args.test, num_users=NUM_PERSONAS)
+train_set, test_set = helpers.train_test_tuples(args.test, num_users=NUM_PERSONAS)
 
 train(args.epoch, args.batchsize, optimizer, model, dl,
       train_set, test_set,

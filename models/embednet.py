@@ -4,10 +4,9 @@ import chainer.links as L
 
 import numpy as np
 
-from .dnn import DnnWithLinear
-from .embed_id import EmbedID
-from tripletloss import triplet_loss, triplet_accuracy
-from l2_norm_squared import l2_norm_squared
+from functions.l2_norm_squared import l2_norm_squared
+from functions.tripletloss import triplet_loss, triplet_accuracy
+from models.embednet_dnn import DnnWithLinear
 
 
 class EmbedNet(chainer.Chain):
