@@ -33,7 +33,7 @@ class L2DistanceSquared(function.Function):
     def backward(self, inputs, grad_outputs):
         x, y = inputs
         gw, = grad_outputs
-        return 2 * x, -2 * y,
+        return 2 * x * gw, -2 * y * gw,
 
 
 def l2_distance_squared(x0, x1):
