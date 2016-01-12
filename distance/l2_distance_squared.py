@@ -16,25 +16,30 @@ class L2DistanceSquared(function.Function):
         )
 
     def forward_cpu(self, inputs):
-        # TODO once forward_gpu is done I can use np here
-        xp = cuda.get_array_module(inputs)
         x0, x1 = inputs
         diff = x0 - x1
         diff *= diff
         n = diff.shape[0]
-        self.y = xp.zeros(n, dtype=x0.dtype)
+        y = np.zeros(n, dtype=x0.dtype)
         for i in range(n):
-            self.y[i] = diff[i].sum()
-        return self.y,
+            y[i] = diff[i].sum()
+        return y,
 
     def forward_gpu(self, inputs):
-        self.forward_cpu(inputs)  # TODO
+        x0, x1 = inputs
+        l2distancesquared_kernel = cuda.cupy.ReductionKernel(
+            'T x , T y', 'T z', '(x-y) * (x-y)', 'a + b', 'z = a', '0', 'l2distancesquared'
+        )
+        return l2distancesquared_kernel(x0, x1, axis=1),
 
     def backward(self, inputs, grad_outputs):
         x, y = inputs
+        xp = cuda.get_array_module(x)
         gw, = grad_outputs
-        return 2 * x * gw, -2 * y * gw,
-
+        gx = xp.zeros_like(x, dtype=x.dtype)
+        for i in range(x.shape[0]):
+            gx[i] = 2 * (x[i] - y[i]) * gw[i]
+        return gx, -gx
 
 def l2_distance_squared(x0, x1):
 

@@ -20,10 +20,10 @@ class TripletNet(chainer.Chain):
     changeable.
     """
 
-    def __init__(self, dnn=HofferDnn):
-        super(TripletNet, self).__init__()
-        # TODO accept parameters for other DNNs
-        self.dnn = dnn()
+    def __init__(self):
+        super(TripletNet, self).__init__(
+            dnn=HofferDnn(),
+        )
 
     def __call__(self, x, compute_acc=False):
         """
@@ -69,11 +69,8 @@ class TripletNet(chainer.Chain):
         # loss is MSE of softmax to [0, 1] vector
         sm = F.softmax(dist)
         xp = cuda.get_array_module(sm)
-        zero_one = xp.array([0, 1] * n, dtype=sm.data.dtype).reshape(n, 2)
+        # TODO generalize to allow gpu -- get_array_module always gives numpy
+        zero_one = cuda.cupy.array([0, 1] * n, dtype=sm.data.dtype).reshape(n, 2)
 
         self.loss = F.mean_squared_error(sm, chainer.Variable(zero_one))
-
-        if compute_acc:
-            self.accuracy = float(dist_pos.data[dist_pos.data < dist_neg.data].size) / dist_pos.data.size
-
         return self.loss
