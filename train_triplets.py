@@ -83,7 +83,6 @@ for _ in range(1, args.epoch + 1):
             helpers.write_graph(model.loss)
             graph_generated = True
 
-        exit(1)
     logger.log_mean("train")
 
     if optimizer.epoch % 25 == 0:
@@ -93,8 +92,9 @@ for _ in range(1, args.epoch + 1):
         logger.make_snapshot(model, optimizer, optimizer.epoch, args.out)
 
     # testing
-    # for i in test:
-    #     x = chainer.Variable(dl.get_batch(i, batch_triplets))
-    #     loss = model(x, compute_acc=True)
-    #     logger.log_iteration("test", float(model.loss.data), float(model.accuracy.data))
-    # logger.log_mean("test")
+    dl.prepare_triplet_provider(test, batch_triplets, NUM_CLASSES)
+    for i in range(len(test)):
+        x = chainer.Variable(dl.get_batch() / 255.0)
+        loss = model(x, compute_acc=True)
+        logger.log_iteration("test", float(model.loss.data), float(model.accuracy))
+    logger.log_mean("test")
