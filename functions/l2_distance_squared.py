@@ -30,11 +30,21 @@ class L2DistanceSquared(function.Function):
         )
         return l2distancesquared_kernel(x0, x1, axis=1),
 
-    def backward(self, inputs, gw):
+    def backward_cpu(self, inputs, gw):
         x0, x1 = inputs
-        xp = cuda.get_array_module(x0)
-        gx = xp.array([2 * (x0[i] - x1[i]) * gw[0][i] for i in range(len(x0))],
+        gx = np.array([2 * (x0[i] - x1[i]) * gw[0][i] for i in range(len(x0))],
                       dtype=x0.dtype)
+        return gx, -gx
+
+    def backward_gpu(self, inputs, gw):
+        x0, x1 = inputs
+        gw0 = gw[0].reshape(len(gw[0]), 1).repeat(x0.shape[1], axis=1)
+        kernel = cuda.elementwise(
+            'T x0, T x1, T gw0',
+            'T gx',
+            'gx = 2 * (x0 - x1) * gw0',
+            'l2distancesquared_bwd')
+        gx = kernel(x0, x1, gw0)
         return gx, -gx
 
 

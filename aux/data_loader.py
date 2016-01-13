@@ -5,8 +5,10 @@ from scipy.misc import imread
 import queue
 import threading
 
+from chainer import cuda
 
-QUEUE_SIZE = 2  # maybe make it an argument later
+
+QUEUE_SIZE = 8  # maybe make it an argument later
 
 
 def get_signature_path(person, sign_num, variation, data_dir, extension):
@@ -46,12 +48,15 @@ class DataLoader(object):
         I.e. initiate loading data into the queue and ensure that data is
         available
         """
-        if not self.queue.empty():
-            print("Warning: queue not empty on prepare_epoch")
-        self.data_provider = TripletLoader(
-            anchors, self.queue, self.data_dir, self.xp,
-            num_triplets, num_classes, False, self.image_ext)
-        self.data_provider.start()
+        NUM_WORKERS = 1
+        for i in range(NUM_WORKERS):
+            anchors_part = anchors[i::NUM_WORKERS]
+            if not self.queue.empty():
+                print("Warning: queue not empty on prepare_epoch")
+            self.data_provider = TripletLoader(
+                anchors_part, self.queue, self.data_dir, self.xp,
+                num_triplets, num_classes, False, self.image_ext, cuda.Device())
+            self.data_provider.start()
 
     def get_batch(self):
         return self.queue.get()
@@ -74,7 +79,7 @@ class DataLoader(object):
 class TripletLoader(threading.Thread):
 
     def __init__(self, anchors, queue, data_dir, xp, num_triplets,
-                 num_classes, skilled_forgeries, image_ext):
+                 num_classes, skilled_forgeries, image_ext, device):
         # skilled_forgeries parameter indicates whether or not skilled
         # forgeries are allowed to be anchor and positive samples.
         threading.Thread.__init__(self)
@@ -87,6 +92,7 @@ class TripletLoader(threading.Thread):
         self.num_variations = 20
         self.skilled_forgeries = skilled_forgeries
         self.queue = queue
+        self.device = device
 
     def run(self):
         for a in self.anchors:
@@ -94,6 +100,7 @@ class TripletLoader(threading.Thread):
             self.queue.put(data)  # blocking, no timeout
 
     def load_batch(self, anchor_id):
+        self.device.use()
         """Make a batch using person <anchor_id> as anchor."""
         anchor_samples = list(range(1, 25)) if self.skilled_forgeries else list(range(1, 55))
         np.random.shuffle(anchor_samples)
@@ -123,4 +130,5 @@ class TripletLoader(threading.Thread):
         n = self.xp.array(
             [load_image(np.random.choice(neg_ids), np.random.choice(list(range(1, 55))), np.random.randint(1, self.num_variations+1), self.xp, self.data_dir)
              for _ in range(self.num_triplets)], dtype=self.xp.float32)
+
         return self.xp.concatenate([a, p, n])

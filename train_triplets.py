@@ -36,7 +36,7 @@ args = helpers.get_args()
 NUM_CLASSES = 200
 
 if args.gpu >= 0:
-    cuda.check_cuda_available()
+    cuda.get_device(args.gpu).use()
 xp = cuda.cupy if args.gpu >= 0 else np
 
 
@@ -49,8 +49,6 @@ logger = Logger(args.log)
 model = TripletNet()
 
 if args.gpu >= 0:
-    print("using gpu", args.gpu)
-    cuda.get_device(args.gpu).use()
     model = model.to_gpu()
 
 optimizer = optimizers.SGD()
@@ -85,6 +83,7 @@ for _ in range(1, args.epoch + 1):
             helpers.write_graph(model.loss)
             graph_generated = True
 
+        exit(1)
     logger.log_mean("train")
 
     if optimizer.epoch % 25 == 0:
