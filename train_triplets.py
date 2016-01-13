@@ -19,7 +19,7 @@ from chainer import links as L
 from chainer import serializers
 
 from aux import helpers
-from aux.data_loader import TripletLoader
+from aux.data_loader import DataLoader
 from aux.logger import Logger
 from functions.tripletloss import triplet_loss
 from models.tripletnet import TripletNet
@@ -33,6 +33,7 @@ def train_test_anchors(test_fraction, num_classes):
     return list(range(1, num_classes+1))[:-t], list(range(1, num_classes+1))[-t:]
 
 args = helpers.get_args()
+NUM_CLASSES = 200
 
 if args.gpu >= 0:
     cuda.check_cuda_available()
@@ -40,7 +41,7 @@ xp = cuda.cupy if args.gpu >= 0 else np
 
 
 batch_triplets = args.batchsize  # batchsize will be 3 * batch_triplets
-dl = TripletLoader(args.data, xp, num_classes=4000)
+dl = DataLoader(args.data, xp)
 logger = Logger(args.log)
 
 
@@ -64,7 +65,7 @@ elif args.initmodel:
     serializers.load_hdf5(args.initmodel, old_model)  # load snapshot
     model.dnn.dnn.copyparams(old_model.predictor.dnn)  # copy DnnComponent's params
 
-train, test = train_test_anchors(args.test, num_classes=dl.num_classes)
+train, test = train_test_anchors(args.test, num_classes=NUM_CLASSES)
 
 graph_generated = False
 for _ in range(1, args.epoch + 1):
@@ -73,8 +74,9 @@ for _ in range(1, args.epoch + 1):
 
     # training
     np.random.shuffle(train)
-    for i in train:
-        x_data = dl.get_batch(i, batch_triplets) / 255.0
+    dl.prepare_triplet_provider(train, batch_triplets, NUM_CLASSES)
+    for i in range(len(train)):
+        x_data = dl.get_batch() / 255.0
         x = chainer.Variable(x_data)
         optimizer.update(model, x)
         logger.log_iteration("train", float(model.loss.data))
