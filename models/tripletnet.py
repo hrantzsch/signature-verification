@@ -20,9 +20,9 @@ class TripletNet(chainer.Chain):
     changeable.
     """
 
-    def __init__(self):
+    def __init__(self, dnn):
         super(TripletNet, self).__init__(
-            dnn=HofferDnn(),
+            dnn=dnn(),
         )
 
     def __call__(self, x, compute_acc=False):
