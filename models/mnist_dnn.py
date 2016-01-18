@@ -5,6 +5,18 @@ import chainer.links as L
 import numpy as np
 
 
+class MnistWithLinear(chainer.Chain):
+
+    def __init__(self):
+        super(MnistWithLinear, self).__init__(
+            dnn=MnistDnn(),
+            out=L.Linear(128, 128),
+        )
+
+    def __call__(self, x):
+        return self.out(self.dnn(x))
+
+
 class MnistDnn(chainer.Chain):
     """
     An embedding network modelled by the example of Hoffer and Ailon's
