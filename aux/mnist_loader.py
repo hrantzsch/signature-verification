@@ -5,8 +5,8 @@ import numpy as np
 from scipy.misc import imread
 
 
-TRAIN_PKL = '/home/hannes/Data/mnist/train.pkl'
-TEST_PKL = '/home/hannes/Data/mnist/test.pkl'
+TRAIN_PKL = '/home/hannes/data/mnist/train.pkl'
+TEST_PKL = '/home/hannes/data/mnist/test.pkl'
 
 
 class MnistLoader:
@@ -15,10 +15,6 @@ class MnistLoader:
         self.train_groups = pickle.load(open(TRAIN_PKL, 'rb'))
         self.test_groups = pickle.load(open(TEST_PKL, 'rb'))
         self.xp = xp
-
-    def _load_triplet(self, triplet):
-        return self.xp.array([imread(path).astype(self.xp.float32)
-                              for path in triplet], dtype=self.xp.float32)
 
     def get_batch(self, anchor, batchsize, train=True):
         groups = self.train_groups if train else self.test_groups
@@ -31,5 +27,6 @@ class MnistLoader:
         paths.extend([groups[neg][np.random.choice(len(groups[neg]))][1]
                       for neg in np.random.choice(negatives, batchsize)])
 
-        return self.xp.array([imread(path).astype(self.xp.float32)
-                              for path in paths], dtype=self.xp.float32)[:,self.xp.newaxis, ...]
+        batch = self.xp.array([imread(path).astype(self.xp.float32)
+                              for path in paths], dtype=self.xp.float32)
+        return (batch / 255.0)[:,self.xp.newaxis, ...]

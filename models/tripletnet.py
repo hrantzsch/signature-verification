@@ -54,14 +54,14 @@ class TripletNet(chainer.Chain):
         n = anc.data.shape[0]
 
         # compute distances of anchor to positive and negative, respectively
-        # diff_pos2 = anc - pos
-        # dist_pos2 = F.reshape(l2_norm_squared(diff_pos2), (n, 1))
-        # diff_neg = anc - neg
-        # dist_neg = F.reshape(l2_norm_squared(diff_neg), (n, 1))
-        dist_pos = F.log(F.reshape(l2_distance_squared(anc, pos), (n, 1)))
-        dist_neg = F.log(F.reshape(l2_distance_squared(anc, neg), (n, 1)))
+        diff_pos = anc - pos
+        dist_pos = F.reshape(F.batch_l2_norm_squared(diff_pos), (n, 1))
+        diff_neg = anc - neg
+        dist_neg = F.reshape(F.batch_l2_norm_squared(diff_neg), (n, 1))
+        # dist_pos = F.reshape(l2_distance_squared(anc, pos), (n, 1))
+        # dist_neg = F.reshape(l2_distance_squared(anc, neg), (n, 1))
 
-        dist = F.concat((dist_pos, dist_neg))
+        dist = F.log(F.concat((dist_pos, dist_neg)))
 
         # compute loss:
         # calculate softmax on distances as a ratio measure

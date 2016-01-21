@@ -9,16 +9,17 @@ import pickle
 import argparse
 
 import chainer
-from chainer import cuda
-from chainer import optimizers
 from chainer import computational_graph as c
+from chainer import cuda
 from chainer import links as L
+from chainer import serializers
+from chainer import optimizers
 
 from aux import helpers
 from aux.mnist_loader import MnistLoader
 from aux.logger import Logger
 from models.tripletnet import TripletNet
-from models.mnist_dnn import MnistDnn
+from models.mnist_dnn import MnistDnn, MnistWithLinear
 
 
 args = helpers.get_args()
@@ -31,10 +32,16 @@ dl = MnistLoader(xp)
 logger = Logger(args.log)
 model = TripletNet(dnn=MnistDnn)
 
+if args.initmodel:
+    print("loading pretrained mnist dnn")
+    pretrained = L.Classifier(MnistWithLinear())
+    serializers.load_hdf5(args.initmodel, pretrained)
+    model.dnn.copyparams(pretrained.predictor.dnn)
+
 if args.gpu >= 0:
     model = model.to_gpu()
 
-optimizer = optimizers.SGD()
+optimizer = optimizers.SGD(lr=0.001)
 optimizer.setup(model)
 
 train = list(range(10))
