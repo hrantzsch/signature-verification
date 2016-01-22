@@ -41,7 +41,7 @@ if args.initmodel:
 if args.gpu >= 0:
     model = model.to_gpu()
 
-optimizer = optimizers.SGD(lr=0.001)
+optimizer = optimizers.MomentumSGD(lr=0.001)
 optimizer.setup(model)
 
 train = list(range(10))
@@ -56,7 +56,7 @@ for _ in range(1, args.epoch + 1):
 
     # training
     for anchor in train:
-        x_data = dl.get_batch(anchor, args.batchsize)
+        x_data = dl.get_batch(args.batchsize)
         x = chainer.Variable(x_data)
         optimizer.update(model, x)
         logger.log_iteration("train", float(model.loss.data))
@@ -75,7 +75,7 @@ for _ in range(1, args.epoch + 1):
 
     # testing
     for anchor in test:
-        x_data = dl.get_batch(anchor, args.batchsize, train=False)
+        x_data = dl.get_batch(args.batchsize, train=False)
         x = chainer.Variable(x_data)
         loss = model(x, compute_acc=True)
         logger.log_iteration("test", float(model.loss.data), float(model.accuracy))

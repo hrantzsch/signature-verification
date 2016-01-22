@@ -7,8 +7,11 @@ import numpy as np
 
 from functions.l2_norm_squared import l2_norm_squared
 from functions.l2_distance_squared import l2_distance_squared
+from functions.mse_zero_one import mse_zero_one
 from models.hoffer_dnn import HofferDnn
 from models.embednet_dnn import DnnComponent
+
+from functions.sqrt import sqrt
 
 
 class TripletNet(chainer.Chain):
@@ -51,28 +54,34 @@ class TripletNet(chainer.Chain):
 
         # split to anchors, positives, and negatives
         anc, pos, neg = F.split_axis(h, 3, 0)
-        n = anc.data.shape[0]
+        n = len(anc.data)
 
         # compute distances of anchor to positive and negative, respectively
         diff_pos = anc - pos
-        dist_pos = F.reshape(F.batch_l2_norm_squared(diff_pos), (n, 1))
         diff_neg = anc - neg
-        dist_neg = F.reshape(F.batch_l2_norm_squared(diff_neg), (n, 1))
+
+        dist_pos = F.expand_dims(F.batch_l2_norm_squared(diff_pos), 1)
+        dist_neg = F.expand_dims(F.batch_l2_norm_squared(diff_neg), 1)
         # dist_pos = F.reshape(l2_distance_squared(anc, pos), (n, 1))
         # dist_neg = F.reshape(l2_distance_squared(anc, neg), (n, 1))
 
-        dist = F.log(F.concat((dist_pos, dist_neg)))
+        # dist = F.concat((dist_pos, dist_neg))
+        dist = sqrt(F.concat((dist_pos, dist_neg)))
 
         # compute loss:
         # calculate softmax on distances as a ratio measure
         # loss is MSE of softmax to [0, 1] vector
         sm = F.softmax(dist)
+        print('--fwd--sm--')
+        print(sm.data)
         # TODO generalize to allow gpu -- get_array_module always gives numpy
         # xp = cuda.get_array_module(sm)
-        zero_one = cuda.cupy.array([0, 1] * n, dtype=dist.data.dtype).reshape(n, 2)
-        self.loss = F.mean_squared_error(sm, chainer.Variable(zero_one))
+        # zero_one = cuda.cupy.array([0, 1] * n, dtype=dist.data.dtype).reshape(n, 2)
+        # self.loss = F.mean_squared_error(sm, chainer.Variable(zero_one))
+        self.loss = mse_zero_one(sm)
 
         if compute_acc:
             self.accuracy = (dist_pos.data < dist_neg.data).sum() / len(dist_pos)
+        # import pdb; pdb.set_trace()
 
         return self.loss

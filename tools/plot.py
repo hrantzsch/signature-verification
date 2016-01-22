@@ -64,7 +64,7 @@ def plot_test(logfile):
 
     plt.plot(list(map(avg, loss)), label='loss')
     plt.plot(list(map(avg, acc)), label='acc')
-    plt.legend(loc='upper right')
+    plt.legend(loc='upper left')
     plt.show()
 
 
@@ -94,4 +94,4 @@ if __name__ == "__main__":
     #                     help="'avg' for average, or 'all'")
     args = parser.parse_args()
 
-    plot_avg(args.logfile)
+    plot_test(args.logfile)

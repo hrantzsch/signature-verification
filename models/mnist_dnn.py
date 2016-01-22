@@ -10,7 +10,7 @@ class MnistWithLinear(chainer.Chain):
     def __init__(self):
         super(MnistWithLinear, self).__init__(
             dnn=MnistDnn(),
-            out=L.Linear(128, 128),
+            out=L.Linear(64, 10),
         )
 
     def __call__(self, x):
@@ -36,7 +36,7 @@ class MnistDnn(chainer.Chain):
             conv1=L.Convolution2D(1, 32, 3),
             conv2=L.Convolution2D(32, 64, 2),
             conv3=L.Convolution2D(64, 128, 3),
-            conv4=L.Convolution2D(128, 128, 2),
+            conv4=L.Convolution2D(128, 64, 2),
         )
 
     def __call__(self, x, train=True):
