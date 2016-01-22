@@ -72,8 +72,8 @@ class TripletNet(chainer.Chain):
         # calculate softmax on distances as a ratio measure
         # loss is MSE of softmax to [0, 1] vector
         sm = F.softmax(dist)
-        print('--fwd--sm--')
-        print(sm.data)
+        # print('--fwd--sm--')
+        # print(sm.data)
         # TODO generalize to allow gpu -- get_array_module always gives numpy
         # xp = cuda.get_array_module(sm)
         # zero_one = cuda.cupy.array([0, 1] * n, dtype=dist.data.dtype).reshape(n, 2)

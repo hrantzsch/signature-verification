@@ -54,9 +54,18 @@ for _ in range(1, args.epoch + 1):
     np.random.shuffle(train)
     np.random.shuffle(test)
 
+    # testing
+    for anchor in test:
+        for _ in range(5):
+            x_data = dl.get_batch(args.batchsize, anchor, train=False)
+            x = chainer.Variable(x_data)
+            loss = model(x, compute_acc=True)
+            logger.log_iteration("test", float(model.loss.data), float(model.accuracy))
+    logger.log_mean("test")
+
     # training
     for anchor in train:
-        x_data = dl.get_batch(args.batchsize)
+        x_data = dl.get_batch(args.batchsize, anchor)
         x = chainer.Variable(x_data)
         optimizer.update(model, x)
         logger.log_iteration("train", float(model.loss.data))
@@ -67,16 +76,17 @@ for _ in range(1, args.epoch + 1):
 
     logger.log_mean("train")
 
-    if optimizer.epoch % 25 == 0:
+    if optimizer.epoch % 10 == 0 and optimizer.lr > 0.000005:
         optimizer.lr *= 0.5
         print("learning rate decreased to {}".format(optimizer.lr))
     if optimizer.epoch % args.interval == 0:
         logger.make_snapshot(model, optimizer, optimizer.epoch, args.out)
 
-    # testing
-    for anchor in test:
-        x_data = dl.get_batch(args.batchsize, train=False)
+# testing
+for anchor in test:
+    for _ in range(5):
+        x_data = dl.get_batch(args.batchsize, anchor, train=False)
         x = chainer.Variable(x_data)
         loss = model(x, compute_acc=True)
         logger.log_iteration("test", float(model.loss.data), float(model.accuracy))
-    logger.log_mean("test")
+logger.log_mean("test")

@@ -25,28 +25,20 @@ class MnistLoader:
             classes.remove(anchor)
         negative = np.random.choice(classes)
 
-        return self.xp.array([
-            groups[anchor][np.random.randint(len(groups[anchor]))][1],
-            groups[anchor][np.random.randint(len(groups[anchor]))][1],
-            groups[negative][np.random.randint(len(groups[negative]))][1]
-        ])
+        return (groups[anchor][np.random.randint(len(groups[anchor]))][1],
+                groups[anchor][np.random.randint(len(groups[anchor]))][1],
+                groups[negative][np.random.randint(len(groups[negative]))][1])
 
     def get_batch(self, batchsize, anchor=None, train=True):
         groups = self.train_groups if train else self.test_groups
 
-        # # anchors and positives
-        # paths = [groups[anchor][index][1] for index in np.random.choice(
-        #             len(groups[anchor]), batchsize*2)]
-        # negatives = list(range(len(groups)))
-        # negatives.remove(anchor)
-        # # negatives
-        # paths.extend([groups[neg][np.random.choice(len(groups[neg]))][1]
-        #               for neg in np.random.choice(negatives, batchsize)])
-
-        paths = self.xp.array([self.get_rnd_triplet(groups, anchor)
-                               for _ in range(batchsize)]).flatten()
-
+        triplets = [self.get_rnd_triplet(groups, anchor)
+                    for _ in range(batchsize)]
+        paths = []
+        for i in range(3):
+            for j in range(batchsize):
+                paths.append(triplets[j][i])
+        
         batch = self.xp.array([imread(path).astype(self.xp.float32)
                               for path in paths], dtype=self.xp.float32)
-
-        return (batch / 255.0)[:,self.xp.newaxis, ...]
+        return (batch / 255.0)[:, self.xp.newaxis, ...]

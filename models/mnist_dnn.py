@@ -34,20 +34,24 @@ class MnistDnn(chainer.Chain):
     def __init__(self):
         super(MnistDnn, self).__init__(
             conv1=L.Convolution2D(1, 32, 3),
+            bn1=L.BatchNormalization(32),
             conv2=L.Convolution2D(32, 64, 2),
+            bn2=L.BatchNormalization(64),
             conv3=L.Convolution2D(64, 128, 3),
+            bn3=L.BatchNormalization(128),
             conv4=L.Convolution2D(128, 64, 2),
         )
 
     def __call__(self, x, train=True):
-        h = F.max_pooling_2d(
-            F.relu(self.conv1(x)), 2)
-        h = F.dropout(h, train=train)
-        h = F.max_pooling_2d(
-            F.relu(self.conv2(h)), 2)
-        h = F.dropout(h, train=train)
-        h = F.max_pooling_2d(
-            F.relu(self.conv3(h)), 2)
-        h = F.dropout(h, train=train)
+
+        h = self.bn1(self.conv1(x))
+        h = F.max_pooling_2d(F.relu(h), 2)
+
+        h = self.bn2(self.conv2(h))
+        h = F.max_pooling_2d(F.relu(h), 2)
+
+        h = self.bn3(self.conv3(h))
+        h = F.max_pooling_2d(F.relu(h), 2)
+
         h = F.relu(self.conv4(h))
         return h
