@@ -46,7 +46,7 @@ logger = Logger(args.log)
 
 
 # model setup
-model = TripletNet()
+model = TripletNet(HofferDnn)
 
 if args.gpu >= 0:
     model = model.to_gpu()

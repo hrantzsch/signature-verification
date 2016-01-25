@@ -99,36 +99,61 @@ class TripletLoader(threading.Thread):
             data = self.load_batch(a)
             self.queue.put(data)  # blocking, no timeout
 
-    def load_batch(self, anchor_id):
-        self.device.use()
-        """Make a batch using person <anchor_id> as anchor."""
-        anchor_samples = list(range(1, 25)) if self.skilled_forgeries else list(range(1, 55))
-        np.random.shuffle(anchor_samples)
+    def get_rnd_triplet(self, anchor=None):
+        if anchor is None:
+            np.random.shuffle(classes)
+            anchor = classes.pop()
+        else:
+            classes.remove(anchor)
+        negative = np.random.choice(classes)
 
-        # pop anchor_sample, removing it from the remaining anchor_samples
-        # the variation of the anchor also needs to be fix  # TODO: why?
-        anchor_sign_num = anchor_samples.pop()
-        anchor_variation = np.random.randint(1, self.num_variations+1)
+        return (groups[anchor][np.random.randint(len(groups[anchor]))][1],
+                groups[anchor][np.random.randint(len(groups[anchor]))][1],
+                groups[negative][np.random.randint(len(groups[negative]))][1])
 
-        neg_ids = list(range(1, self.num_classes+1))
-        neg_ids.remove(anchor_id)
-        # allow use of 24 signatures and 30 forgeries of the negatives
-        neg_samples = [(np.random.choice(neg_ids),
-                        np.random.choice(list(range(1, 55))))
-                       for i in range(self.num_triplets)]
+    def load_batch(self, anchor=None):
+        # TODO if anchor is not None...
 
-        # for both positive and negative samples we always choose a random variation
-        # repeat anchor sample
-        a = self.xp.array(
-            [load_image(anchor_id, anchor_sign_num, anchor_variation, self.xp, self.data_dir)] *
-            self.num_triplets, dtype=self.xp.float32)
-        # generate <num_triplets> p's randomly sampled from remaining anchor_samples
-        p = self.xp.array(
-            [load_image(anchor_id, np.random.choice(anchor_samples), np.random.randint(1, self.num_variations+1), self.xp, self.data_dir)
-             for _ in range(self.num_triplets)], dtype=self.xp.float32)
-        # negative samples from remaining neg_ids
-        n = self.xp.array(
-            [load_image(np.random.choice(neg_ids), np.random.choice(list(range(1, 55))), np.random.randint(1, self.num_variations+1), self.xp, self.data_dir)
-             for _ in range(self.num_triplets)], dtype=self.xp.float32)
+        # get batchsize triplets
+        triplets = [1
+                    for _ in self.num_triplets]
 
-        return self.xp.concatenate([a, p, n])
+        # make list of paths in appropriate order
+
+        # load images and return batch data
+
+
+    ## Old version of load_batch, not quite as naive implementation
+    # def load_batch(self, anchor_id=None):
+    #     self.device.use()
+    #     """Make a batch using person <anchor_id> as anchor."""
+    #     anchor_samples = list(range(1, 25)) if self.skilled_forgeries else list(range(1, 55))
+    #     np.random.shuffle(anchor_samples)
+    #
+    #     # pop anchor_sample, removing it from the remaining anchor_samples
+    #     # the variation of the anchor also needs to be fix  # TODO: why?
+    #     anchor_sign_num = anchor_samples.pop()
+    #     anchor_variation = np.random.randint(1, self.num_variations+1)
+    #
+    #     neg_ids = list(range(1, self.num_classes+1))
+    #     neg_ids.remove(anchor_id)
+    #     # allow use of 24 signatures and 30 forgeries of the negatives
+    #     neg_samples = [(np.random.choice(neg_ids),
+    #                     np.random.choice(list(range(1, 55))))
+    #                    for i in range(self.num_triplets)]
+    #
+    #     # for both positive and negative samples we always choose a random variation
+    #     # repeat anchor sample
+    #     a = self.xp.array(
+    #         [load_image(anchor_id, anchor_sign_num, anchor_variation, self.xp, self.data_dir)] *
+    #         self.num_triplets, dtype=self.xp.float32)
+    #     # generate <num_triplets> p's randomly sampled from remaining anchor_samples
+    #     p = self.xp.array(
+    #         [load_image(anchor_id, np.random.choice(anchor_samples), np.random.randint(1, self.num_variations+1), self.xp, self.data_dir)
+    #          for _ in range(self.num_triplets)], dtype=self.xp.float32)
+    #     # negative samples from remaining neg_ids
+    #     n = self.xp.array(
+    #         [load_image(np.random.choice(neg_ids), np.random.choice(list(range(1, 55))), np.random.randint(1, self.num_variations+1), self.xp, self.data_dir)
+    #          for _ in range(self.num_triplets)], dtype=self.xp.float32)
+    #
+    #     return self.xp.concatenate([a, p, n])
