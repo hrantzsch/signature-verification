@@ -48,7 +48,7 @@ class DataLoader(object):
         I.e. initiate loading data into the queue and ensure that data is
         available
         """
-        NUM_WORKERS = 1
+        NUM_WORKERS = 1  # Warning: multiple workers are probably broken by now
         for i in range(NUM_WORKERS):
             anchors_part = anchors[i::NUM_WORKERS]
             if not self.queue.empty():
@@ -78,7 +78,7 @@ class DataLoader(object):
 
 class TripletLoader(threading.Thread):
 
-    def __init__(self, anchors, queue, data_dir, xp, num_triplets,
+    def __init__(self, anchors, queue, data_dir, xp, train_test, num_triplets,
                  num_classes, skilled_forgeries, image_ext, device):
         # skilled_forgeries parameter indicates whether or not skilled
         # forgeries are allowed to be anchor and positive samples.

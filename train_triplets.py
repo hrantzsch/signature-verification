@@ -19,18 +19,13 @@ from chainer import links as L
 from chainer import serializers
 
 from aux import helpers
-from aux.data_loader import DataLoader
+from aux.triplet_loader import TripletLoader
 from aux.logger import Logger
 from functions.tripletloss import triplet_loss
 from models.tripletnet import TripletNet
 from models.hoffer_dnn import HofferDnn
 from models.embednet import EmbedNet
 from models.embednet_dnn import DnnComponent, DnnWithLinear
-
-
-def train_test_anchors(test_fraction, num_classes):
-    t = int(num_classes * test_fraction)
-    return list(range(1, num_classes+1))[:-t], list(range(1, num_classes+1))[-t:]
 
 args = helpers.get_args()
 NUM_CLASSES = 200
@@ -39,11 +34,9 @@ if args.gpu >= 0:
     cuda.get_device(args.gpu).use()
 xp = cuda.cupy if args.gpu >= 0 else np
 
-
 batch_triplets = args.batchsize  # batchsize will be 3 * batch_triplets
-dl = DataLoader(args.data, xp)
+dl = TripletLoader(xp)
 logger = Logger(args.log)
-
 
 # model setup
 model = TripletNet(HofferDnn)
@@ -55,15 +48,15 @@ optimizer = optimizers.SGD()
 # optimizer = optimizers.AdaGrad(lr=0.005)
 optimizer.setup(model)
 
-if args.initmodel and args.resume:
-    logger.load_snapshot(args.initmodel, args.resume, model, optimizer)
-elif args.initmodel:
-    print("No resume state given -- finetuning on model " + args.initmodel)
-    old_model = L.Classifier(DnnWithLinear(10))  # mimic pretrained model
-    serializers.load_hdf5(args.initmodel, old_model)  # load snapshot
-    model.dnn.dnn.copyparams(old_model.predictor.dnn)  # copy DnnComponent's params
+# if args.initmodel and args.resume:
+#     logger.load_snapshot(args.initmodel, args.resume, model, optimizer)
+# elif args.initmodel:
+#     print("No resume state given -- finetuning on model " + args.initmodel)
+#     old_model = L.Classifier(DnnWithLinear(10))  # mimic pretrained model
+#     serializers.load_hdf5(args.initmodel, old_model)  # load snapshot
+#     model.dnn.dnn.copyparams(old_model.predictor.dnn)  # copy DnnComponent's params
 
-train, test = train_test_anchors(args.test, num_classes=NUM_CLASSES)
+train, test = helpers.train_test_anchors(args.test, num_classes=NUM_CLASSES)
 
 graph_generated = False
 for _ in range(1, args.epoch + 1):
@@ -72,9 +65,11 @@ for _ in range(1, args.epoch + 1):
 
     # training
     np.random.shuffle(train)
-    dl.prepare_triplet_provider(train, batch_triplets, NUM_CLASSES)
+    dl.create_source('train', train, batch_triplets, args.data)
+    dl.create_source('test', test, batch_triplets, args.data)
+
     for i in range(len(train)):
-        x_data = dl.get_batch() / 255.0
+        x_data = dl.get_batch('train') / 255.0
         x = chainer.Variable(x_data)
         optimizer.update(model, x)
         logger.log_iteration("train", float(model.loss.data))
@@ -92,9 +87,8 @@ for _ in range(1, args.epoch + 1):
         logger.make_snapshot(model, optimizer, optimizer.epoch, args.out)
 
     # testing
-    dl.prepare_triplet_provider(test, batch_triplets, NUM_CLASSES)
     for i in range(len(test)):
-        x = chainer.Variable(dl.get_batch() / 255.0)
+        x = chainer.Variable(dl.get_batch('test') / 255.0)
         loss = model(x, compute_acc=True)
         logger.log_iteration("test", float(model.loss.data), float(model.accuracy))
     logger.log_mean("test")
