@@ -1,26 +1,41 @@
+import sys
+from datetime import date, datetime
+
 import chainer
 from chainer import serializers
 
 
+def load_snapshot(self, model_path, state_path, model, optimizer):
+    print('Load model from', model_path)
+    serializers.load_hdf5(model_path, model)
+    print('Load optimizer state from', state_path)
+    serializers.load_hdf5(state_path, optimizer)
+
+
 class Logger:
 
-    def __init__(self, log_file=None):
+    def __init__(self, args, optimizer, name=None, extra_msg=''):
         self.iteration = 0
         self.sum_loss = 0
         self.sum_acc = 0
-        self.log_file = log_file
         self.current_section = ''
+        self.optimizer = optimizer
 
-    def make_snapshot(self, model, optimizer, epoch, name):
-        serializers.save_hdf5('{}_{}.model'.format(name, epoch), model)
-        serializers.save_hdf5('{}_{}.state'.format(name, epoch), optimizer)
+        # setup according to arguments
+        self.name = name if name is not None else 'signdist'
+        self.out_file = args.out if args.out is not "" \
+            else "{}_{}".format(date.isoformat(date.today()), self.name)
+        self.log_file = args.log if args.log is not "" \
+            else "{}.log".format(self.out_file)
+        # write config to head of the log file
+        self.write_config(args, extra_msg)
+
+    def make_snapshot(self, model):
+        # TODO: get model from Optimizer
+        prefix = "{}_{}".format(self.out_file, self.optimizer.epoch)
+        serializers.save_hdf5(prefix + ".model", model)
+        serializers.save_hdf5(prefix + ".state", self.optimizer)
         print("Snapshot created")
-
-    def load_snapshot(self, model_path, state_path, model, optimizer):
-        print('Load model from', model_path)
-        serializers.load_hdf5(model_path, model)
-        print('Load optimizer state from', state_path)
-        serializers.load_hdf5(state_path, optimizer)
 
     def log_iteration(self, label, loss, acc=None):
         self.iteration += 1
@@ -51,3 +66,30 @@ class Logger:
                 f.write('\n')
                 self.current_section = label
             f.write("{},{},{}\n".format(self.iteration, loss, acc))
+
+    def write_config(self, args, extra_msg):
+        with open(self.log_file, 'a+') as f:
+            self._comment("=" * 40, f)
+            self._comment("{} initiated at {}".format(
+                self.name, datetime.isoformat(datetime.now())
+            ), f)
+            self._comment("-" * 40, f)  # arguments passed
+            self._comment("Data: " + args.data, f)
+            self._comment("Batchsize: {}".format(args.batchsize), f)
+            self._comment("Test ratio: {}".format(args.test), f)
+            dev = "CPU" if args.gpu < 0 else "GPU ".format(args.gpu)
+            self._comment("Device: " + dev, f)
+            if args.initmodel:
+                self._comment("Init model: " + args.initmodel, f)
+            if args.resume:
+                self.comment("Resume state: " + args.resume, f)
+            self._comment("-" * 40, f)  # parameters set in script
+            self._comment("Optimizer: " + self.optimizer.__class__.__name__, f)
+            if extra_msg:
+                self._comment(extra_msg, f)
+            self._comment("-" * 40, f)  # complete call
+            self._comment("{}".format(sys.argv), f)
+            self._comment("=" * 40, f)
+
+    def _comment(self, msg, f):
+        f.write("# {}\n".format(msg))

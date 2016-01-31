@@ -21,6 +21,7 @@ from chainer import serializers
 from aux import helpers
 from aux.triplet_loader import TripletLoader
 from aux.logger import Logger
+from aux.logger import load_snapshot
 from functions.tripletloss import triplet_loss
 from models.tripletnet import TripletNet
 from models.hoffer_dnn import HofferDnn
@@ -36,7 +37,6 @@ xp = cuda.cupy if args.gpu >= 0 else np
 
 batch_triplets = args.batchsize  # batchsize will be 3 * batch_triplets
 dl = TripletLoader(xp)
-logger = Logger(args.log)
 
 # model setup
 model = TripletNet(HofferDnn)
@@ -44,17 +44,27 @@ model = TripletNet(HofferDnn)
 if args.gpu >= 0:
     model = model.to_gpu()
 
+# optimizer = optimizers.SGD(lr=0.001)
 optimizer = optimizers.MomentumSGD(lr=0.001)
 # optimizer = optimizers.AdaGrad(lr=0.005)
 optimizer.setup(model)
 
-# if args.initmodel and args.resume:
-#     logger.load_snapshot(args.initmodel, args.resume, model, optimizer)
+if args.initmodel and args.resume:
+    # NOTE: 16-01-31 snapshots have been created using vanilla SGD optimizer!
+    load_snapshot(args.initmodel, args.resume, model, optimizer)
+    # ===
+    # TODO remove... decrease LR after loading snapshot
+    optimizer.lr *= 0.5
+    # ===
+    print("Continuing from snapshot. LR: {}".format(optimizer.lr))
 # elif args.initmodel:
 #     print("No resume state given -- finetuning on model " + args.initmodel)
 #     old_model = L.Classifier(DnnWithLinear(10))  # mimic pretrained model
 #     serializers.load_hdf5(args.initmodel, old_model)  # load snapshot
 #     model.dnn.dnn.copyparams(old_model.predictor.dnn)  # copy DnnComponent's params
+
+logger = Logger(args, optimizer, 'sign_triplet',
+                "Num classes: {}".format(NUM_CLASSES))
 
 train, test = helpers.train_test_anchors(args.test, num_classes=NUM_CLASSES)
 
@@ -80,7 +90,7 @@ for _ in range(1, args.epoch + 1):
 
     logger.log_mean("train")
 
-    if optimizer.epoch % 25 == 0:
+    if optimizer.epoch % 10 == 0:
         optimizer.lr *= 0.5
         print("learning rate decreased to {}".format(optimizer.lr))
     if optimizer.epoch % args.interval == 0:

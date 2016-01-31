@@ -29,9 +29,9 @@ def get_args():
     parser.add_argument('--gpu', '-g', default=-1, type=int,
                         help='GPU ID (negative value indicates CPU)')
 
-    parser.add_argument('--out', '-o', default='signdist',
+    parser.add_argument('--out', '-o', default='',
                         help='Path to save model snapshots')
-    parser.add_argument('--log', '-l', default='signdist.log',
+    parser.add_argument('--log', '-l', default='',
                         help='Log file')
     parser.add_argument('--interval', '-i', default=10, type=int,
                         help='Snapshot interval in epochs')
