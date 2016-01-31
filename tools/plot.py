@@ -12,6 +12,8 @@ def parse(logfile):
     section_acc = []
     with open(args.logfile, 'r') as logfile:
         for line in logfile:
+            if line.startswith('#'):  # skip comments, e.g. the header
+                continue
             if 'train' in line:
                 if len(section_loss) > 0:
                     loss_test.append(section_loss)
