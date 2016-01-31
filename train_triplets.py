@@ -28,7 +28,7 @@ from models.embednet import EmbedNet
 from models.embednet_dnn import DnnComponent, DnnWithLinear
 
 args = helpers.get_args()
-NUM_CLASSES = 200
+NUM_CLASSES = 4000
 
 if args.gpu >= 0:
     cuda.get_device(args.gpu).use()
@@ -44,7 +44,7 @@ model = TripletNet(HofferDnn)
 if args.gpu >= 0:
     model = model.to_gpu()
 
-optimizer = optimizers.SGD()
+optimizer = optimizers.MomentumSGD(lr=0.001)
 # optimizer = optimizers.AdaGrad(lr=0.005)
 optimizer.setup(model)
 
@@ -69,7 +69,7 @@ for _ in range(1, args.epoch + 1):
     dl.create_source('test', test, batch_triplets, args.data)
 
     for i in range(len(train)):
-        x_data = dl.get_batch('train') / 255.0
+        x_data = dl.get_batch('train')
         x = chainer.Variable(x_data)
         optimizer.update(model, x)
         logger.log_iteration("train", float(model.loss.data))
@@ -88,7 +88,7 @@ for _ in range(1, args.epoch + 1):
 
     # testing
     for i in range(len(test)):
-        x = chainer.Variable(dl.get_batch('test') / 255.0)
+        x = chainer.Variable(dl.get_batch('test'))
         loss = model(x, compute_acc=True)
         logger.log_iteration("test", float(model.loss.data), float(model.accuracy))
     logger.log_mean("test")

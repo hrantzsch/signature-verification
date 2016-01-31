@@ -74,6 +74,8 @@ class DataProvider(threading.Thread):
         return os.path.join(directory, fname)
 
     def load_batch(self):
+        # HACK!
+        cuda.get_device(1).use()
         triplets = [self.get_rnd_triplet() for _ in range(self.num_triplets)]
         paths = []
         for i in range(3):
@@ -82,4 +84,5 @@ class DataProvider(threading.Thread):
 
         batch = self.xp.array([imread(path).astype(self.xp.float32)
                               for path in paths], dtype=self.xp.float32)
+
         return (batch / 255.0)[:, self.xp.newaxis, ...]
