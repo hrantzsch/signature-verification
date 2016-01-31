@@ -2,8 +2,6 @@ import chainer
 import chainer.functions as F
 import chainer.links as L
 
-import numpy as np
-
 
 class DnnWithLinear(chainer.Chain):
     def __init__(self, personas):

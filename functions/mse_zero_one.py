@@ -24,7 +24,8 @@ class MseZeroOne(function.Function):
 
     def forward_gpu(self, inputs):
         x0, = inputs
-        x1 = cuda.cupy.array([0, 1] * len(x0), dtype=x0.dtype).reshape(len(x0), 2)
+        x1 = cuda.cupy.array(
+            [0, 1] * len(x0), dtype=x0.dtype).reshape(len(x0), 2)
         self.diff = x0 - x1
         diff = self.diff.ravel()
         return diff.dot(diff) / diff.dtype.type(diff.size),

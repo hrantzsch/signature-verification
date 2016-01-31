@@ -2,8 +2,6 @@ import chainer
 import chainer.functions as F
 import chainer.links as L
 
-import numpy as np
-
 from functions.l2_norm_squared import l2_norm_squared
 from functions.tripletloss import triplet_loss, triplet_accuracy
 from models.embednet_dnn import DnnWithLinear

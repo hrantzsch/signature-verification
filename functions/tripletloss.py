@@ -1,8 +1,6 @@
 import numpy as np
 
-import chainer
 from chainer import function
-import chainer.functions as F
 from chainer.utils import type_check
 from chainer import cuda
 
@@ -30,7 +28,6 @@ class TripletLoss(function.Function):
 
     def forward_cpu(self, inputs):
         a, p, n = inputs  # anchor, positive, negative
-        N = a.shape[0]
         # NOTE on using max(0, ...)
         # the loss is < 0 if (a-n) > (a-p)
         # that's what we want -- we don't want it increase the loss (by using
@@ -40,14 +37,12 @@ class TripletLoss(function.Function):
 
     def forward_gpu(self, inputs):
         a, p, n = inputs  # anchor, positive, negative
-        N = a.shape[0]
         self.Li = cuda.cupy.maximum(0, (a-p)*(a-p) - (a-n)*(a-n) + self.margin)
         return self.Li.sum() / a.size,
 
     def backward(self, inputs, gy):
         a, p, n = inputs  # anchor, positive, negative
-        N = a.shape[0]
-        coeff = gy[0] * gy[0].dtype.type(2. / self.Li.shape[0])
+        coeff = gy[0] * gy[0].dtype.type(2. / len(self.Li))
         gx0 = coeff * self.Li * (n - p)
         gx1 = coeff * self.Li * (p - a)
         gx2 = coeff * self.Li * (a - n)
@@ -84,13 +79,11 @@ class TripletAccuracy(function.Function):
 
     def forward_cpu(self, inputs):
         a, p, n = inputs  # anchor, positive, negative
-        N = a.shape[0]
         self.Li = (a-p)*(a-p) + self.margin - (a-n)*(a-n)
         return np.array(self.Li[self.Li < 0].size / a.size, dtype=a[0].dtype),
 
     def forward_gpu(self, inputs):
         a, p, n = inputs  # anchor, positive, negative
-        N = a.shape[0]
         self.Li = (a-p)*(a-p) + self.margin - (a-n)*(a-n)
         return (self.Li < 0).sum() / a.size,
 
