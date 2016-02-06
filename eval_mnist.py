@@ -16,7 +16,10 @@ import os
 from scipy.misc import imread
 
 import chainer
+from chainer import cuda
+from chainer import links as L
 from chainer import serializers
+from chainer import optimizers
 
 from models.tripletnet import TripletNet
 from models.mnist_dnn import MnistDnn
@@ -25,7 +28,15 @@ parser = argparse.ArgumentParser()
 parser.add_argument('data', help='Path to MNIST data. Should contain folders '
                     'train and test or files train.pkl and test.pkl.')
 parser.add_argument('model', help='Trained DNN model')
+parser.add_argument('--batches', '-e', default=500, type=int)
+parser.add_argument('--batchsize', '-b', default=60, type=int)
+parser.add_argument('--gpu', '-g', default=-1, type=int,
+                    help='GPU ID (negative value indicates CPU)')
 args = parser.parse_args()
+
+if args.gpu >= 0:
+    cuda.get_device(args.gpu).use()
+xp = cuda.cupy if args.gpu >= 0 else np
 
 
 def get_paths(directory):
@@ -81,3 +92,25 @@ else:
 
 
 # setup the network
+model = L.Classifier(L.Linear(64, 10))
+optimizer = chainer.optimizers.MomentumSGD(lr=0.001)
+optimizer.setup(model)
+
+# train
+for batch_num in range(args.batches):
+    # we'll just assume that we get enough of them after a while
+
+    labels = np.random.choice(10, args.batchsize)
+    choose_random = lambda l: \
+        train_features[l][np.random.choice(len(train_features[l]))]
+    batch = [choose_random(l) for l in labels]
+
+    t = chainer.Variable(xp.array(labels, dtype=xp.int32))
+    x = chainer.Variable(xp.array(batch, dtype=xp.float32))
+
+    optimizer.update(model, x, t)
+
+    print("acc: {}".format(model.accuracy.data))
+
+    if batch_num % 2000 == 0:
+        optimizer.lr /= 2
