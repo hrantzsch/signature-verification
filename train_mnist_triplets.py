@@ -29,7 +29,6 @@ if args.gpu >= 0:
 xp = cuda.cupy if args.gpu >= 0 else np
 
 dl = MnistLoader(xp)
-logger = Logger(args.log)
 model = TripletNet(dnn=MnistDnn)
 
 if args.initmodel:
@@ -43,6 +42,8 @@ if args.gpu >= 0:
 
 optimizer = optimizers.MomentumSGD(lr=0.001)
 optimizer.setup(model)
+
+logger = Logger(args, optimizer, "Mnist triplets")
 
 train = list(range(10))
 test = list(range(10))
