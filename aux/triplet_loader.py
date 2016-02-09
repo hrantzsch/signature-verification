@@ -8,7 +8,7 @@ import threading
 from chainer import cuda
 
 
-QUEUE_SIZE = 8
+QUEUE_SIZE = 4
 
 
 class TripletLoader(threading.Thread):
@@ -19,16 +19,18 @@ class TripletLoader(threading.Thread):
         self.workers = {}
         self.sources = {}
 
-    def create_source(self, name, anchors, num_triplets, data_dir):
+    def create_source(self, name, anchors, num_triplets, data_dir, skilled=False):
         """Create a data source, such as for train or test batches, and begin
            filling it with data.
+           Parameter skilled indicates whether skilled forgeries should be re-
+           cognized (if True) or considered positive samples.
         """
         # if name in self.sources:
         #     print("Warning: data source exists and will be overwritten.")
         self.sources[name] = queue.Queue(QUEUE_SIZE)
 
         worker = DataProvider(self.sources[name], anchors, num_triplets,
-                              self.xp, data_dir)
+                              self.xp, data_dir, skilled)
         self.workers[name] = worker
         worker.start()
 
@@ -38,31 +40,23 @@ class TripletLoader(threading.Thread):
 
 class DataProvider(threading.Thread):
 
-    def __init__(self, queue, anchors, num_triplets, xp, data_dir):
+    def __init__(self, queue, anchors, num_triplets, xp, data_dir, skilled):
         threading.Thread.__init__(self)
         self.queue = queue
         self.anchors = anchors
         self.num_triplets = num_triplets
         self.xp = xp
         self.data_dir = data_dir
+        self.skilled = skilled
 
     def run(self):
         for a in self.anchors:
-            data = self.load_batch()
+            data = self.load_batch(self.skilled)
             self.queue.put(data)  # blocking, no timeout
 
-    def get_rnd_triplet(self):
-        """Return a valid triplet (anc, pos, neg) of image paths."""
-        anc, neg = np.random.choice(self.anchors, 2, replace=False)
-        a = self.get_rnd_sample(anc)
-        p = self.get_rnd_sample(anc)
-        n = self.get_rnd_sample(neg)
-        return (a, p, n)
-
-    def get_rnd_sample(self, persona):
-        """Return the path to a random signature of the given persona."""
+    def get_sample(self, persona, sign_num):
+        """Get random variation of the given personal and signature number."""
         directory = os.path.join(self.data_dir, "{:03d}".format(persona))
-        sign_num = np.random.randint(1, 55)
         if sign_num > 24:  # a forgery
             prefix = "cf"
             sign_num -= 24
@@ -73,10 +67,46 @@ class DataProvider(threading.Thread):
             prefix, persona, sign_num, variation)
         return os.path.join(directory, fname)
 
-    def load_batch(self):
-        # HACK!
-        cuda.get_device(1).use()
-        triplets = [self.get_rnd_triplet() for _ in range(self.num_triplets)]
+    def get_rnd_sample(self, persona, no_forgeries=False):
+        """Return the path to a random signature of the given persona."""
+        sign_num = np.random.randint(1, 25 if no_forgeries else 55)
+        return self.get_sample(persona, sign_num)
+
+    def get_easy_triplet(self, no_forgeries):
+        """Return a valid triplet (anc, pos, neg) of image paths.
+           If no_forgeries is True then no forgeries will be used for anchor and
+           positive. Use this for skilled training.
+        """
+        anc, neg = np.random.choice(self.anchors, 2, replace=False)
+        a = self.get_rnd_sample(anc, no_forgeries)
+        p = self.get_rnd_sample(anc, no_forgeries)
+        n = self.get_rnd_sample(neg)
+        return (a, p, n)
+
+    def get_skilled_triplet(self):
+        """Return a triplet where the negative sample is a skilled forgery of
+        the anchor"""
+        persona = np.random.choice(self.anchors)
+        anc_num, pos_num = np.random.choice(range(1, 25), 2, replace=False)
+        neg_num = np.random.randint(25, 55)
+        return tuple(self.get_sample(persona, sign_num)
+                     for sign_num in [anc_num, pos_num, neg_num])
+
+    def load_batch(self, skilled):
+        num_easy_triplets = self.num_triplets // 2 if skilled \
+            else self.num_triplets
+        num_skilled_triplets = self.num_triplets - num_easy_triplets
+
+        easy_triplets = [self.get_easy_triplet(skilled)
+                         for _ in range(num_easy_triplets)]
+        if skilled:
+            skilled_triplets = [self.get_skilled_triplet()
+                                for _ in range(num_skilled_triplets)]
+            triplets = easy_triplets + skilled_triplets
+            np.random.shuffle(triplets)
+        else:
+            triplets = easy_triplets
+
         paths = []
         for i in range(3):
             for j in range(self.num_triplets):

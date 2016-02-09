@@ -51,10 +51,6 @@ optimizer.setup(model)
 if args.initmodel and args.resume:
     # NOTE: 16-01-31 snapshots have been created using vanilla SGD optimizer!
     load_snapshot(args.initmodel, args.resume, model, optimizer)
-    # ===
-    # TODO remove... decrease LR after loading snapshot
-    optimizer.lr *= 0.5
-    # ===
     print("Continuing from snapshot. LR: {}".format(optimizer.lr))
 # elif args.initmodel:
 #     print("No resume state given -- finetuning on model " + args.initmodel)
@@ -74,8 +70,8 @@ for _ in range(1, args.epoch + 1):
 
     # training
     np.random.shuffle(train)
-    dl.create_source('train', train, batch_triplets, args.data)
-    dl.create_source('test', test, batch_triplets, args.data)
+    dl.create_source('train', train, batch_triplets, args.data, skilled=True)
+    dl.create_source('test', test, batch_triplets, args.data, skilled=True)
 
     for i in range(len(train)):
         x_data = dl.get_batch('train')
@@ -89,7 +85,7 @@ for _ in range(1, args.epoch + 1):
 
     logger.log_mean("train")
 
-    if optimizer.epoch % 10 == 0:
+    if optimizer.epoch in [6, 15, 30]:
         optimizer.lr *= 0.5
         print("learning rate decreased to {}".format(optimizer.lr))
     if optimizer.epoch % args.interval == 0:
