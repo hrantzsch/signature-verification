@@ -30,18 +30,17 @@ from models.hoffer_dnn import HofferDnn
 args = helpers.get_args()
 NUM_CLASSES = 4000
 
-if args.gpu >= 0:
-    cuda.get_device(args.gpu).use()
 xp = cuda.cupy if args.gpu >= 0 else np
-
-batch_triplets = args.batchsize  # batchsize will be 3 * batch_triplets
 dl = TripletLoader(xp)
 
-# model setup
 model = TripletNet(HofferDnn)
 
 if args.gpu >= 0:
+    cuda.get_device(args.gpu).use()
+    dl.use_device(args.gpu)
     model = model.to_gpu()
+
+batch_triplets = args.batchsize  # batchsize will be 3 * batch_triplets
 
 # optimizer = optimizers.SGD(lr=0.001)
 optimizer = optimizers.MomentumSGD(lr=0.001)
