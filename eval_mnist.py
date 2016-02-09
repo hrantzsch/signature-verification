@@ -73,12 +73,12 @@ def load_data(paths, save=False, fname='data.pkl'):
 # load data either from images or from pkl file
 # features will be a dict from class to lists of np.arrays
 # {0: [ (1, 64), ... ], ... }
-if 'train.pkl' in os.listdir(args.data) and \
-   'test.pkl' in os.listdir(args.data):
+if 'train_features.pkl' in os.listdir(args.data) and \
+   'test_features.pkl' in os.listdir(args.data):
     train_features = pickle.load(
-        open(os.path.join(args.data, 'train.pkl'), 'rb'))
+        open(os.path.join(args.data, 'train_features.pkl'), 'rb'))
     test_features = pickle.load(
-        open(os.path.join(args.data, 'test.pkl'), 'rb'))
+        open(os.path.join(args.data, 'test_features.pkl'), 'rb'))
 else:
     train = os.path.join(args.data, 'train')
     test = os.path.join(args.data, 'test')
@@ -87,12 +87,15 @@ else:
         raise FileNotFoundError
 
     # push data through DNN and save resulting features
-    train_features = load_data(get_paths(train), save=True, fname='train.pkl')
-    test_features = load_data(get_paths(test), save=True, fname='test.pkl')
+    train_features = load_data(get_paths(train), save=True, fname='train_features.pkl')
+    test_features = load_data(get_paths(test), save=True, fname='test_features.pkl')
 
 
 # setup the network
 model = L.Classifier(L.Linear(64, 10))
+if args.gpu >= 0:
+    model = model.to_gpu()
+
 optimizer = chainer.optimizers.MomentumSGD(lr=0.001)
 optimizer.setup(model)
 
@@ -112,5 +115,5 @@ for batch_num in range(args.batches):
 
     print("acc: {}".format(model.accuracy.data))
 
-    if batch_num % 2000 == 0:
+    if batch_num % 1000 == 0:
         optimizer.lr /= 2

@@ -22,11 +22,10 @@ from aux import helpers
 from aux.triplet_loader import TripletLoader
 from aux.logger import Logger
 from aux.logger import load_snapshot
-from functions.tripletloss import triplet_loss
 from models.tripletnet import TripletNet
 from models.hoffer_dnn import HofferDnn
-from models.embednet import EmbedNet
-from models.embednet_dnn import DnnComponent, DnnWithLinear
+# from models.embednet import EmbedNet
+# from models.embednet_dnn import DnnComponent, DnnWithLinear
 
 args = helpers.get_args()
 NUM_CLASSES = 4000

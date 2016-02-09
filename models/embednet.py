@@ -2,7 +2,6 @@ import chainer
 import chainer.functions as F
 import chainer.links as L
 
-from functions.l2_norm_squared import l2_norm_squared
 from functions.tripletloss import triplet_loss, triplet_accuracy
 from models.embednet_dnn import DnnWithLinear
 
@@ -41,7 +40,7 @@ class EmbedNet(chainer.Chain):
         # forward batch through deep network
         h = self.dnn(x)
         # Perform L2 normalizationa and embedding
-        h = l2_norm_squared(h)
+        h = F.batch_l2_norm_squared(h)
         # TODO scaling?
         h = self.embed(h)
 
