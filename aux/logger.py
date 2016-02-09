@@ -62,7 +62,7 @@ class Logger:
     def write_iteration(self, label, loss, acc):
         with open(self.log_file, 'a+') as f:
             if self.current_section != label:
-                f.write(label)
+                f.write("{} [{}]".format(label, self.optimizer.epoch))
                 f.write('\n')
                 self.current_section = label
             f.write("{},{},{}\n".format(self.iteration, loss, acc))
@@ -85,6 +85,7 @@ class Logger:
                 self.comment("Resume state: " + args.resume, f)
             self._comment("-" * 40, f)  # parameters set in script
             self._comment("Optimizer: " + self.optimizer.__class__.__name__, f)
+            self._comment("Epoch: {}".format(self.optimizer.epoch), f)
             if extra_msg:
                 self._comment(extra_msg, f)
             self._comment("-" * 40, f)  # complete call
