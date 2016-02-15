@@ -66,9 +66,7 @@ class TripletNet(chainer.Chain):
         sm = F.softmax(dist)
         self.loss = mse_zero_one(sm)
 
-        self.accuracy = (dist.data[..., 0] > dist.data[..., 1]).sum() / len(dist)
-
-        # if compute_acc:
-            # self.accuracy = (dist_pos.data < dist_neg.data).sum()/len(dist_pos)
+        if compute_acc:
+            self.accuracy = (dist.data[..., 0] > dist.data[..., 1]).sum() / len(dist)
 
         return self.loss
