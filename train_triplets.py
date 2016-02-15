@@ -24,6 +24,7 @@ from aux.logger import Logger
 from aux.logger import load_snapshot
 from models.tripletnet import TripletNet
 from models.hoffer_dnn import HofferDnn
+from models.alex_dnn import AlexDNN
 # from models.embednet import EmbedNet
 # from models.embednet_dnn import DnnComponent, DnnWithLinear
 
@@ -33,7 +34,7 @@ NUM_CLASSES = 4000
 xp = cuda.cupy if args.gpu >= 0 else np
 dl = TripletLoader(xp)
 
-model = TripletNet(HofferDnn)
+model = TripletNet(AlexDNN)
 
 if args.gpu >= 0:
     cuda.get_device(args.gpu).use()
@@ -56,8 +57,8 @@ if args.initmodel and args.resume:
 #     serializers.load_hdf5(args.initmodel, old_model)  # load snapshot
 #     model.dnn.dnn.copyparams(old_model.predictor.dnn)  # copy DnnComponent's params
 
-logger = Logger(args, optimizer, 'finetune_skilled',
-                "100%% hard triplets")
+logger = Logger(args, optimizer, 'alex_scratch',
+                "50% hard")
 
 train, test = helpers.train_test_anchors(args.test, num_classes=NUM_CLASSES)
 

@@ -17,7 +17,7 @@ class AlexDNN(chainer.Chain):
             conv4=L.Convolution2D(256, 384, 3, pad=1),
             conv5=L.Convolution2D(384, 384, 3, stride=2, pad=1),
             bn3=L.BatchNormalization(384),
-            conv6=L.Convolution2D(384, 256, 3, pad=1),
+            conv6=L.Convolution2D(384, 256, 2),
         )
         self.train = True
 
@@ -37,5 +37,5 @@ class AlexDNN(chainer.Chain):
         h = F.relu(self.conv4(h))
         h = F.relu(self.conv5(h))
         h = self.bn3(h, test=not self.train)
-        h = F.max_pooling_2d(F.relu(self.conv6(h)), 2, stride=1)
+        h = self.conv6(h)
         return h
