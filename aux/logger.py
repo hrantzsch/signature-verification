@@ -5,7 +5,7 @@ import chainer
 from chainer import serializers
 
 
-def load_snapshot(self, model_path, state_path, model, optimizer):
+def load_snapshot(model_path, state_path, model, optimizer):
     print('Load model from', model_path)
     serializers.load_hdf5(model_path, model)
     print('Load optimizer state from', state_path)
@@ -82,7 +82,7 @@ class Logger:
             if args.initmodel:
                 self._comment("Init model: " + args.initmodel, f)
             if args.resume:
-                self.comment("Resume state: " + args.resume, f)
+                self._comment("Resume state: " + args.resume, f)
             self._comment("-" * 40, f)  # parameters set in script
             self._comment("Optimizer: " + self.optimizer.__class__.__name__, f)
             self._comment("Epoch: {}".format(self.optimizer.epoch), f)

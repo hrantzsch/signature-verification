@@ -52,7 +52,7 @@ class DataProvider(threading.Thread):
         self.device = device
         self.data_dir = data_dir
         self.skilled = skilled
-        
+
     def run(self):
         for a in self.anchors:
             data = self.load_batch(self.skilled)
@@ -99,9 +99,11 @@ class DataProvider(threading.Thread):
     def load_batch(self, skilled):
         if self.device is not None:
             cuda.get_device(self.device).use()
-        num_easy_triplets = self.num_triplets // 2 if skilled \
-            else self.num_triplets
-        num_skilled_triplets = self.num_triplets - num_easy_triplets
+        # num_easy_triplets = self.num_triplets // 2 if skilled \
+        #     else self.num_triplets
+        # num_skilled_triplets = self.num_triplets - num_easy_triplets
+        num_easy_triplets = 0
+        num_skilled_triplets = self.num_triplets
 
         easy_triplets = [self.get_easy_triplet(skilled)
                          for _ in range(num_easy_triplets)]

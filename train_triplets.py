@@ -43,12 +43,11 @@ if args.gpu >= 0:
 batch_triplets = args.batchsize  # batchsize will be 3 * batch_triplets
 
 # optimizer = optimizers.SGD(lr=0.001)
-optimizer = optimizers.MomentumSGD(lr=0.001)
-# optimizer = optimizers.AdaGrad(lr=0.005)
+# optimizer = optimizers.MomentumSGD(lr=0.001)
+optimizer = optimizers.AdaGrad(lr=0.005)
 optimizer.setup(model)
 
 if args.initmodel and args.resume:
-    # NOTE: 16-01-31 snapshots have been created using vanilla SGD optimizer!
     load_snapshot(args.initmodel, args.resume, model, optimizer)
     print("Continuing from snapshot. LR: {}".format(optimizer.lr))
 # elif args.initmodel:
@@ -57,8 +56,8 @@ if args.initmodel and args.resume:
 #     serializers.load_hdf5(args.initmodel, old_model)  # load snapshot
 #     model.dnn.dnn.copyparams(old_model.predictor.dnn)  # copy DnnComponent's params
 
-logger = Logger(args, optimizer, 'sign_triplet',
-                "Num classes: {}".format(NUM_CLASSES))
+logger = Logger(args, optimizer, 'finetune_skilled',
+                "100%% hard triplets")
 
 train, test = helpers.train_test_anchors(args.test, num_classes=NUM_CLASSES)
 
@@ -84,11 +83,11 @@ for _ in range(1, args.epoch + 1):
 
     logger.log_mean("train")
 
-    if optimizer.epoch in [6, 15, 30]:
+    if optimizer.epoch % 10 == 0:
         optimizer.lr *= 0.5
         print("learning rate decreased to {}".format(optimizer.lr))
     if optimizer.epoch % args.interval == 0:
-        logger.make_snapshot(model, optimizer, optimizer.epoch, args.out)
+        logger.make_snapshot(model)
 
     # testing
     for i in range(len(test)):
