@@ -15,7 +15,7 @@ class TripletLoader(threading.Thread):
 
     def __init__(self, array_module):
         self.xp = array_module
-
+        self.device = None
         self.workers = {}
         self.sources = {}
 
@@ -30,22 +30,26 @@ class TripletLoader(threading.Thread):
         self.sources[name] = queue.Queue(QUEUE_SIZE)
 
         worker = DataProvider(self.sources[name], anchors, num_triplets,
-                              self.xp, data_dir, skilled)
+                              self.xp, self.device, data_dir, skilled)
         self.workers[name] = worker
         worker.start()
 
     def get_batch(self, source_name):
         return self.sources[source_name].get()
 
+    def use_device(self, device_id):
+        self.device = device_id
+
 
 class DataProvider(threading.Thread):
 
-    def __init__(self, queue, anchors, num_triplets, xp, data_dir, skilled):
+    def __init__(self, queue, anchors, num_triplets, xp, device, data_dir, skilled):
         threading.Thread.__init__(self)
         self.queue = queue
         self.anchors = anchors
         self.num_triplets = num_triplets
         self.xp = xp
+        self.device = device
         self.data_dir = data_dir
         self.skilled = skilled
 
@@ -93,9 +97,13 @@ class DataProvider(threading.Thread):
                      for sign_num in [anc_num, pos_num, neg_num])
 
     def load_batch(self, skilled):
-        num_easy_triplets = self.num_triplets // 2 if skilled \
-            else self.num_triplets
-        num_skilled_triplets = self.num_triplets - num_easy_triplets
+        if self.device is not None:
+            cuda.get_device(self.device).use()
+        # num_easy_triplets = self.num_triplets // 2 if skilled \
+        #     else self.num_triplets
+        # num_skilled_triplets = self.num_triplets - num_easy_triplets
+        num_easy_triplets = 0
+        num_skilled_triplets = self.num_triplets
 
         easy_triplets = [self.get_easy_triplet(skilled)
                          for _ in range(num_easy_triplets)]
