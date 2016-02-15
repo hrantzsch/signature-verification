@@ -19,7 +19,7 @@ class TripletLoader(threading.Thread):
         self.workers = {}
         self.sources = {}
 
-    def create_source(self, name, anchors, num_triplets, data_dir, skilled=False):
+    def create_source(self, name, anchors, num_triplets, data_dir, skilled=0.5):
         """Create a data source, such as for train or test batches, and begin
            filling it with data.
            Parameter skilled indicates whether skilled forgeries should be re-
@@ -54,7 +54,7 @@ class DataProvider(threading.Thread):
         self.skilled = skilled
 
     def run(self):
-        for a in self.anchors:
+        while True:
             data = self.load_batch(self.skilled)
             self.queue.put(data)  # blocking, no timeout
 
@@ -99,19 +99,18 @@ class DataProvider(threading.Thread):
     def load_batch(self, skilled):
         if self.device is not None:
             cuda.get_device(self.device).use()
-        num_easy_triplets = self.num_triplets // 2 if skilled \
-            else self.num_triplets
+
+        num_easy_triplets = int(np.floor(self.num_triplets * (1 - skilled)))
         num_skilled_triplets = self.num_triplets - num_easy_triplets
 
-        easy_triplets = [self.get_easy_triplet(skilled)
+        easy_triplets = [self.get_easy_triplet(num_skilled_triplets > 0)
                          for _ in range(num_easy_triplets)]
-        if skilled:
-            skilled_triplets = [self.get_skilled_triplet()
-                                for _ in range(num_skilled_triplets)]
-            triplets = easy_triplets + skilled_triplets
+        skilled_triplets = [self.get_skilled_triplet()
+                            for _ in range(num_skilled_triplets)]
+        triplets = easy_triplets + skilled_triplets
+
+        if num_skilled_triplets > 0:
             np.random.shuffle(triplets)
-        else:
-            triplets = easy_triplets
 
         paths = []
         for i in range(3):

@@ -14,7 +14,7 @@ def load_snapshot(model_path, state_path, model, optimizer):
 
 class Logger:
 
-    def __init__(self, args, optimizer, name=None, extra_msg=''):
+    def __init__(self, args, optimizer, name, extra_msg=''):
         self.iteration = 0
         self.sum_loss = 0
         self.sum_acc = 0
@@ -22,11 +22,10 @@ class Logger:
         self.optimizer = optimizer
 
         # setup according to arguments
-        self.name = name if name is not None else 'signdist'
+        self.name = name if name is not '' else 'signdist'
         self.out_file = args.out if args.out is not "" \
             else "{}_{}".format(date.isoformat(date.today()), self.name)
-        self.log_file = args.log if args.log is not "" \
-            else "{}.log".format(self.out_file)
+        self.log_file = "{}.log".format(self.out_file)
         # write config to head of the log file
         self.write_config(args, extra_msg)
 
@@ -77,6 +76,7 @@ class Logger:
             self._comment("Data: " + args.data, f)
             self._comment("Batchsize: {}".format(args.batchsize), f)
             self._comment("Test ratio: {}".format(args.test), f)
+            self._comment("Hard triplet ratio: {}".format(args.skilled), f)
             dev = "CPU" if args.gpu < 0 else "GPU ".format(args.gpu)
             self._comment("Device: " + dev, f)
             if args.initmodel:

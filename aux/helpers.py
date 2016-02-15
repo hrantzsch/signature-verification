@@ -20,21 +20,25 @@ def get_args():
     parser.add_argument('data', help='Path to training data')
 
     parser.add_argument('--batchsize', '-b', type=int, default=12,
-                        help='Learning minibatch size')
+                        help='Learning minibatch size [12]')
     parser.add_argument('--epoch', '-e', default=50, type=int,
-                        help='Number of epochs to learn')
+                        help='Number of epochs to learn [50]')
     parser.add_argument('--test', '-t', default=0.1, type=float,
-                        help='Fraction of samples to spare for testing (0.1)')
+                        help='Fraction of samples to spare for testing [0.1]')
+    parser.add_argument('--skilled', '-s', default=0.5, type=float,
+                        help='Fraction of hard triplets within each batch [0.5]')
 
     parser.add_argument('--gpu', '-g', default=-1, type=int,
-                        help='GPU ID (negative value indicates CPU)')
+                        help='GPU ID (negative value indicates CPU) [-1]')
 
-    parser.add_argument('--out', '-o', default='',
-                        help='Path to save model snapshots')
-    parser.add_argument('--log', '-l', default='',
-                        help='Log file')
     parser.add_argument('--interval', '-i', default=10, type=int,
-                        help='Snapshot interval in epochs')
+                        help='Snapshot interval in epochs [10]')
+    parser.add_argument('--out', '-o', default='',
+                        help='Name for snapshots and logging')
+    # parser.add_argument('--out', '-o', default='',
+    #                     help='Path to save model snapshots')
+    # parser.add_argument('--log', '-l', default='',
+    #                     help='Log file')
 
     parser.add_argument('--initmodel', '-m', default='',
                         help='Initialize the model from given file')

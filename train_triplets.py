@@ -57,8 +57,7 @@ if args.initmodel and args.resume:
 #     serializers.load_hdf5(args.initmodel, old_model)  # load snapshot
 #     model.dnn.dnn.copyparams(old_model.predictor.dnn)  # copy DnnComponent's params
 
-logger = Logger(args, optimizer, 'alex_scratch',
-                "50% hard")
+logger = Logger(args, optimizer, args.out)
 
 train, test = helpers.train_test_anchors(args.test, num_classes=NUM_CLASSES)
 
@@ -69,8 +68,8 @@ for _ in range(1, args.epoch + 1):
 
     # training
     np.random.shuffle(train)
-    dl.create_source('train', train, batch_triplets, args.data, skilled=True)
-    dl.create_source('test', test, batch_triplets, args.data, skilled=True)
+    dl.create_source('train', train, batch_triplets, args.data, skilled=0.5)
+    dl.create_source('test', test, batch_triplets, args.data, skilled=1.0)
 
     for i in range(len(train)):
         x_data = dl.get_batch('train')
