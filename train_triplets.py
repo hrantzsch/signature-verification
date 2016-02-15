@@ -75,7 +75,7 @@ for _ in range(1, args.epoch + 1):
         x_data = dl.get_batch('train')
         x = chainer.Variable(x_data)
         optimizer.update(model, x)
-        logger.log_iteration("train", float(model.loss.data))
+        logger.log_iteration("train", float(model.loss.data), float(model.accuracy))
 
         if not graph_generated:
             helpers.write_graph(model.loss)
@@ -92,6 +92,6 @@ for _ in range(1, args.epoch + 1):
     # testing
     for i in range(len(test)):
         x = chainer.Variable(dl.get_batch('test'))
-        loss = model(x, compute_acc=True)
+        loss = model(x)
         logger.log_iteration("test", float(model.loss.data), float(model.accuracy))
     logger.log_mean("test")
