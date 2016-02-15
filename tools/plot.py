@@ -51,13 +51,14 @@ def plot_avg(logfile):
     x = list(range(1, len(loss_train)+1))
     # x = list(range(len(loss_train)))  # old style starting at epoch 0
 
-    axarr[0].plot(x, list(map(avg, loss_train)), '.-')
-    axarr[0].plot(x, list(map(avg, loss_test)), '.-')
+    axarr[0].plot(x, list(map(avg, loss_train)), '.-', label='train')
+    axarr[0].plot(x, list(map(avg, loss_test)), '.-', label='test')
     axarr[0].set_title("loss")
-    axarr[1].plot(x, list(map(avg, acc_train)), '.-', label='train')
-    axarr[1].plot(x, list(map(avg, acc_test)), '.-', label='test')
+    axarr[0].legend(loc='upper right')
+    if len(acc_train) > 0:
+        axarr[1].plot(x, list(map(avg, acc_train)), '.-')
+    axarr[1].plot(x, list(map(avg, acc_test)), 'g.-')
     axarr[1].set_title("acc")
-    plt.legend(loc='lower right')
     plt.show()
 
 
@@ -96,4 +97,4 @@ if __name__ == "__main__":
     #                     help="'avg' for average, or 'all'")
     args = parser.parse_args()
 
-    plot_test(args.logfile)
+    plot_avg(args.logfile)
