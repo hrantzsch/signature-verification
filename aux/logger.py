@@ -23,8 +23,7 @@ class Logger:
 
         # setup according to arguments
         self.name = name if name is not '' else 'signdist'
-        self.out_file = args.out if args.out is not "" \
-            else "{}_{}".format(date.isoformat(date.today()), self.name)
+        self.out_file = "{}_{}".format(date.isoformat(date.today()), self.name)
         self.log_file = "{}.log".format(self.out_file)
         # write config to head of the log file
         self.write_config(args, extra_msg)
