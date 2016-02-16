@@ -65,6 +65,10 @@ class Logger:
                 self.current_section = label
             f.write("{},{},{}\n".format(self.iteration, loss, acc))
 
+    def mark_lr(self):
+        with open(self.log_file, 'a+') as f:
+            self._comment("--- LR now {} ---".format(self.optimizer.lr), f)
+
     def write_config(self, args, extra_msg):
         with open(self.log_file, 'a+') as f:
             self._comment("=" * 40, f)
@@ -84,6 +88,7 @@ class Logger:
                 self._comment("Resume state: " + args.resume, f)
             self._comment("-" * 40, f)  # parameters set in script
             self._comment("Optimizer: " + self.optimizer.__class__.__name__, f)
+            self._comment("Initial LR: {}".format(self.optimizer.lr), f)
             self._comment("Epoch: {}".format(self.optimizer.epoch), f)
             if extra_msg:
                 self._comment(extra_msg, f)

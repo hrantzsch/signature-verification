@@ -44,8 +44,8 @@ if args.gpu >= 0:
 batch_triplets = args.batchsize  # batchsize will be 3 * batch_triplets
 
 # optimizer = optimizers.SGD(lr=0.001)
-# optimizer = optimizers.MomentumSGD(lr=0.001)
-optimizer = optimizers.AdaGrad(lr=0.005)
+# optimizer = optimizers.MomentumSGD(lr=0.01)
+optimizer = optimizers.AdaGrad(lr=0.01)
 optimizer.setup(model)
 
 if args.initmodel and args.resume:
@@ -67,9 +67,8 @@ for _ in range(1, args.epoch + 1):
     print('epoch', optimizer.epoch)
 
     # training
-    np.random.shuffle(train)
-    dl.create_source('train', train, batch_triplets, args.data, skilled=0.5)
-    dl.create_source('test', test, batch_triplets, args.data, skilled=1.0)
+    dl.create_source('train', train, batch_triplets, args.data, skilled=args.skilled)
+    dl.create_source('test', test, batch_triplets, args.data, skilled=args.skilled)
 
     for i in range(len(train)):
         x_data = dl.get_batch('train')
@@ -83,8 +82,9 @@ for _ in range(1, args.epoch + 1):
 
     logger.log_mean("train")
 
-    if optimizer.epoch % 10 == 0:
+    if optimizer.epoch in [2, 10, 25, 50]:
         optimizer.lr *= 0.5
+        logger.mark_lr()
         print("learning rate decreased to {}".format(optimizer.lr))
     if optimizer.epoch % args.interval == 0:
         logger.make_snapshot(model)
