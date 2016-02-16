@@ -53,12 +53,15 @@ def plot_avg(logfile):
 
     axarr[0].plot(x, list(map(avg, loss_train)), '.-', label='train')
     axarr[0].plot(x, list(map(avg, loss_test)), '.-', label='test')
+    # axarr[0].set_ylim([0.45, 0.55])
     axarr[0].set_title("loss")
     axarr[0].legend(loc='upper right')
     if len(acc_train) > 0:
         axarr[1].plot(x, list(map(avg, acc_train)), '.-')
     axarr[1].plot(x, list(map(avg, acc_test)), 'g.-')
     axarr[1].set_title("acc")
+    # axarr[1].set_ylim([0.2, 0.3])
+
     plt.show()
 
 

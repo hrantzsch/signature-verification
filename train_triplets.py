@@ -25,8 +25,7 @@ from aux.logger import load_snapshot
 from models.tripletnet import TripletNet
 from models.hoffer_dnn import HofferDnn
 from models.alex_dnn import AlexDNN
-# from models.embednet import EmbedNet
-# from models.embednet_dnn import DnnComponent, DnnWithLinear
+from models.embednet_dnn import DnnComponent
 
 args = helpers.get_args()
 NUM_CLASSES = 4000
@@ -44,7 +43,7 @@ if args.gpu >= 0:
 batch_triplets = args.batchsize  # batchsize will be 3 * batch_triplets
 
 # optimizer = optimizers.SGD(lr=0.001)
-# optimizer = optimizers.MomentumSGD(lr=0.01)
+# optimizer = optimizers.MomentumSGD(lr=0.001)
 optimizer = optimizers.AdaGrad(lr=0.01)
 optimizer.setup(model)
 
@@ -82,7 +81,7 @@ for _ in range(1, args.epoch + 1):
 
     logger.log_mean("train")
 
-    if optimizer.epoch in [2, 10, 25, 50]:
+    if optimizer.epoch % 10 == 0:
         optimizer.lr *= 0.5
         logger.mark_lr()
         print("learning rate decreased to {}".format(optimizer.lr))
