@@ -54,7 +54,9 @@ class DataProvider(threading.Thread):
         self.skilled = skilled
 
     def run(self):
-        while True:
+        # the anchor is not used right now, but we need to stop after
+        # loading len(self.anchors) batches
+        for _ in self.anchors:
             data = self.load_batch(self.skilled)
             self.queue.put(data)  # blocking, no timeout
 
