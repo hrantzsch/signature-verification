@@ -41,12 +41,13 @@ def load_data(paths, save=False, fname='data.pkl'):
 
 
 # MNIST sample paths
-TRAIN_PKL = '/home/hannes/Data/mnist/train_paths.pkl'
+# TRAIN_PKL = '/home/hannes/Data/mnist/train_paths.pkl'
 # TEST_PKL  = '/home/hannes/Data/mnist/test_paths.pkl'
 # paths = flatten(pickle.load(open(TRAIN_PKL, 'rb')))
-# data = load_data(paths, True, "mnist_16-02-08_train.pkl")
+# paths_test = flatten(pickle.load(open(TRAIN_PKL, 'rb')))
+# data = load_data(chain(paths, paths_test), True, "mnist_16-02-17.pkl")
 
-data = pickle.load(open("mnist_16-02-08_train.pkl", 'rb'))
+data = pickle.load(open("mnist_16-02-17.pkl", 'rb'))
 # import pdb; pdb.set_trace()
 all_samples = np.concatenate([np.stack(data[c]) for c in range(10)])
 all_samples = all_samples.reshape(len(all_samples), -1)
@@ -71,12 +72,15 @@ mlab_pca = PCA(cleaned)
 colors = ['b', 'g', 'r', 'k', 'c', 'm', 'y', '#aaaaaa', '#ffa500', '#A52A2A']
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
+# ax = fig.add_subplot(111)
+# ax = Axes3D(fig)
 for i in range(10):
     start = sum(map(lambda x: len(data[x]), range(i)))
     end = start + len(data[i])
+    # ax.scatter(mlab_pca.Y[start:end, 0], mlab_pca.Y[start:end, 1], mlab_pca.Y[start:end, 2],
+    #            marker='.', color=colors[i])
     ax.plot(mlab_pca.Y[start:end, 0], mlab_pca.Y[start:end, 1], mlab_pca.Y[start:end, 2],
-            '.', markersize=5, alpha=0.3, label=i, color=colors[i])
-
+                '.', markersize=5, alpha=0.1, color=colors[i], label=i)
 plt.legend(numpoints=1)
 # plt.xlabel('x_values')
 # plt.ylabel('y_values')
