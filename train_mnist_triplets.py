@@ -43,11 +43,21 @@ if args.gpu >= 0:
 optimizer = optimizers.MomentumSGD(lr=0.001)
 optimizer.setup(model)
 
-logger = Logger(args, optimizer, "Mnist triplets", extra_msg="outsize: 64")
+logger = Logger(args, optimizer, args.out)
 
 train = list(range(10))
 test = list(range(10))
 graph_generated = False
+
+# testing
+for anchor in test:
+    for _ in range(5):
+        x_data = dl.get_batch(args.batchsize, anchor, train=False)
+        x = chainer.Variable(x_data)
+        loss = model(x, compute_acc=True)
+        logger.log_iteration("test", float(model.loss.data), float(model.accuracy))
+logger.log_mean("test")
+
 for _ in range(1, args.epoch + 1):
     optimizer.new_epoch()
     print('epoch', optimizer.epoch)
@@ -70,14 +80,14 @@ for _ in range(1, args.epoch + 1):
 
     # testing
     for anchor in test:
-        for _ in range(5):
+        for _ in range(3):
             x_data = dl.get_batch(args.batchsize, anchor, train=False)
             x = chainer.Variable(x_data)
             loss = model(x, compute_acc=True)
             logger.log_iteration("test", float(model.loss.data), float(model.accuracy))
     logger.log_mean("test")
 
-    if optimizer.epoch % 5 == 0 and optimizer.lr > 0.000005:
+    if optimizer.epoch % 10 == 0 and optimizer.lr > 0.0000005:
         optimizer.lr *= 0.5
         print("learning rate decreased to {}".format(optimizer.lr))
     if optimizer.epoch % args.interval == 0:
