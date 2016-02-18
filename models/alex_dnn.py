@@ -16,9 +16,9 @@ class AlexDNN(chainer.Chain):
             conv3=L.Convolution2D(256, 256, 5, stride=2, pad=1),
             bn3=L.BatchNormalization(256),
             conv4=L.Convolution2D(256, 384, 3, pad=1),
-            bn3=L.BatchNormalization(384),
-            conv5=L.Convolution2D(384, 384, 3, stride=2, pad=1),
             bn4=L.BatchNormalization(384),
+            conv5=L.Convolution2D(384, 384, 3, stride=2, pad=1),
+            bn5=L.BatchNormalization(384),
             conv6=L.Convolution2D(384, 256, 2),
         )
         self.train = True
@@ -29,22 +29,20 @@ class AlexDNN(chainer.Chain):
 
     def __call__(self, x):
         self.clear()
-        h = self.conv1(x)
-        h = self.bn1(F.relu(h), test=not self.train)
-        h = F.max_pooling_2d(h, (3, 5), stride=2)
+        h = self.bn1(self.conv1(x), test=not self.train)
+        h = F.max_pooling_2d(F.relu(h), (3, 5), stride=2)
 
-        h = self.conv2(h)
-        h = self.bn2(F.relu(h), test=not self.train)
+        h = self.bn2(self.conv2(h), test=not self.train)
+        h = F.relu(h)
 
-        h = self.conv3(h)
-        h = self.bn3(F.relu(h), test=not self.train)
-        h = F.max_pooling_2d(h, 3, stride=2, pad=1)
+        h = self.bn3(self.conv3(h), test=not self.train)
+        h = F.max_pooling_2d(F.relu(h), 3, stride=2, pad=1)
 
-        h = F.relu(self.conv4(h))
-        h = self.bn4(F.relu(h), test=not self.train)
+        h = self.bn4(self.conv4(h), test=not self.train)
+        h = F.relu(h)
 
-        h = F.relu(self.conv5(h))
-        h = self.bn5(F.relu(h), test=not self.train)
+        h = self.bn5(self.conv5(h), test=not self.train)
+        h = F.relu(h)
 
         h = F.relu(self.conv6(h))
         return h
