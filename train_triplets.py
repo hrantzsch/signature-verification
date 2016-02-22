@@ -81,7 +81,7 @@ for _ in range(1, args.epoch + 1):
 
     logger.log_mean("train")
 
-    if optimizer.epoch % 10 == 0:
+    if optimizer.epoch % args.lrinterval == 0:
         optimizer.lr *= 0.5
         logger.mark_lr()
         print("learning rate decreased to {}".format(optimizer.lr))

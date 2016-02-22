@@ -33,6 +33,8 @@ def get_args():
 
     parser.add_argument('--interval', '-i', default=10, type=int,
                         help='Snapshot interval in epochs [10]')
+    parser.add_argument('--lrinterval', '-l', default=10, type=int,
+                        help='Interval for halving the LR [10]')
     parser.add_argument('--out', '-o', default='',
                         help='Name for snapshots and logging')
     # parser.add_argument('--out', '-o', default='',
