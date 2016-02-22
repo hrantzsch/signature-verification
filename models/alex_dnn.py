@@ -13,13 +13,13 @@ class AlexDNN(chainer.Chain):
             bn1=L.BatchNormalization(96),
             conv2=L.Convolution2D(96, 256, (1, 2), stride=(1, 2)),
             bn2=L.BatchNormalization(256),
-            conv3=L.Convolution2D(256, 256, 5, stride=2, pad=1),
-            bn3=L.BatchNormalization(256),
-            conv4=L.Convolution2D(256, 384, 3, pad=1),
-            bn4=L.BatchNormalization(384),
-            conv5=L.Convolution2D(384, 384, 3, stride=2, pad=1),
-            bn5=L.BatchNormalization(384),
-            conv6=L.Convolution2D(384, 256, 2),
+            conv3=L.Convolution2D(256, 384, 5, stride=2, pad=1),
+            bn3=L.BatchNormalization(384),
+            conv4=L.Convolution2D(384, 256, 3, pad=1),
+            bn4=L.BatchNormalization(256),
+            conv5=L.Convolution2D(256, 128, 3, stride=2, pad=1),
+            bn5=L.BatchNormalization(128),
+            conv6=L.Convolution2D(128, 64, 2),
         )
         self.train = True
 
