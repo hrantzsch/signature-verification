@@ -41,7 +41,7 @@ class TripletNet(chainer.Chain):
 
         return F.concat((dist_pos, dist_neg))
 
-    def __call__(self, x, compute_acc=False):
+    def __call__(self, x):
         """
         Forward through DNN and compute loss and accuracy.
 

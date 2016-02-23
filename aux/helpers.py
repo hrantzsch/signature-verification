@@ -21,8 +21,8 @@ def get_args():
 
     parser.add_argument('--batchsize', '-b', type=int, default=12,
                         help='Learning minibatch size [12]')
-    parser.add_argument('--epoch', '-e', default=50, type=int,
-                        help='Number of epochs to learn [50]')
+    parser.add_argument('--epoch', '-e', default=100, type=int,
+                        help='Number of epochs to learn [100]')
     parser.add_argument('--test', '-t', default=0.1, type=float,
                         help='Fraction of samples to spare for testing [0.1]')
     parser.add_argument('--skilled', '-s', default=0.5, type=float,

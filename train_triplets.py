@@ -94,3 +94,7 @@ for _ in range(1, args.epoch + 1):
         loss = model(x)
         logger.log_iteration("test", float(model.loss.data), float(model.accuracy))
     logger.log_mean("test")
+
+# make final snapshot if not just taken one
+if optimizer.epoch % args.interval != 0:
+    logger.make_snapshot(model)
