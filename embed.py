@@ -57,23 +57,29 @@ class Data:
         return (self.queue.empty and not self.worker.isAlive)
 
 
+def get_next_embedding(dnn):
+    x = chainer.Variable(data.get_batch())
+    return cuda.cupy.asnumpy(dnn(x).data).squeeze()
+
+
 if __name__ == '__main__':
     model_path = sys.argv[1]
     dir_path = sys.argv[2]
 
     cuda.get_device(1).use()
 
-    data = Data(dir_path, 800, cuda.cupy)
+    data = Data(dir_path, 540, cuda.cupy)
 
     model = TripletNet(dnn=AlexDNN)
     serializers.load_hdf5(model_path, model)
     model = model.to_gpu(1)
     dnn = model.dnn
 
-    batch_num = 0
+    p_num = 1
     while not data.finished():
-        print("batch {:04d}".format(batch_num), end='\r')
-        x = chainer.Variable(data.get_batch())
-        batch = dnn(x)
-        pickle.dump(batch, open('/data/hannes/GPDSS/embedded_{:04d}'.format(batch_num), 'wb'))
-        batch_num += 1
+        # pack two batches into one pkl file
+        print("persona {:04d}".format(p_num), end='\r')
+        batches = [get_next_embedding(dnn) for _ in range(4)]
+        pickle.dump(np.vstack(batches),
+                    open('/data/hannes/GPDSS/batch_{:04d}.pkl'.format(p_num), 'wb'))
+        p_num += 1
