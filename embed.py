@@ -17,6 +17,9 @@ from models.alex_dnn import AlexDNN
 from models.tripletnet import TripletNet
 
 
+BATCHS_PP = 2
+
+
 # all_files = []
 # for f in os.listdir(data):
 #     folder = os.path.join(data, f)
@@ -68,7 +71,7 @@ if __name__ == '__main__':
 
     cuda.get_device(1).use()
 
-    data = Data(dir_path, 540, cuda.cupy)
+    data = Data(dir_path, 1080 // BATCHS_PP, cuda.cupy)
 
     model = TripletNet(dnn=AlexDNN)
     serializers.load_hdf5(model_path, model)
@@ -79,7 +82,11 @@ if __name__ == '__main__':
     while not data.finished():
         # pack two batches into one pkl file
         print("persona {:04d}".format(p_num), end='\r')
-        batches = [get_next_embedding(dnn) for _ in range(4)]
+        batches = [get_next_embedding(dnn) for _ in range(BATCHS_PP)]
+
+        # print(np.count_nonzero(batches[0]) / batches[0].size)
+        # exit(0)
+
         pickle.dump(np.vstack(batches),
                     open('/data/hannes/GPDSS/batch_{:04d}.pkl'.format(p_num), 'wb'))
         p_num += 1
