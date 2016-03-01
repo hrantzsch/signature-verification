@@ -1,5 +1,6 @@
 import pickle
 import random
+import sys
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,7 +9,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import tsne
 
 
-with open('16-02-17_embeddings.pkl', 'rb') as pickle_file:
+with open(sys.argv[1] + '16-02-17_embeddings.pkl', 'rb') as pickle_file:
     data = pickle.load(pickle_file)
 
 minimum = min([len(value) for value in data.values()])
