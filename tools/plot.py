@@ -15,7 +15,7 @@ def parse(logfile):
     section_dist = []
     with open(args.logfile, 'r') as logfile:
         for line in logfile:
-            if line.startswith('#'):  # skip comments, e.g. the header
+            if line.startswith('#') or line == '\n':  # skip comments and blank lines
                 continue
             if 'train' in line:
                 if len(section_loss) > 0:
