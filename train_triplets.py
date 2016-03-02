@@ -42,20 +42,14 @@ if args.gpu >= 0:
 
 batch_triplets = args.batchsize  # batchsize will be 3 * batch_triplets
 
-# optimizer = optimizers.SGD(lr=0.001)
 # optimizer = optimizers.MomentumSGD(lr=0.001)
 optimizer = optimizers.AdaGrad(lr=0.01)
 optimizer.setup(model)
+optimizer.add_hook(chainer.optimizer.WeightDecay(args.weight_decay))
 
 if args.initmodel and args.resume:
     load_snapshot(args.initmodel, args.resume, model, optimizer)
     print("Continuing from snapshot. LR: {}".format(optimizer.lr))
-# elif args.initmodel:
-#     print("No resume state given -- finetuning on model " + args.initmodel)
-#     old_model = L.Classifier(DnnWithLinear(10))  # mimic pretrained model
-#     serializers.load_hdf5(args.initmodel, old_model)  # load snapshot
-#     model.dnn.dnn.copyparams(old_model.predictor.dnn)  # copy DnnComponent's params
-
 logger = Logger(args, optimizer, args.out)
 
 train, test = helpers.train_test_anchors(args.test, num_classes=NUM_CLASSES)

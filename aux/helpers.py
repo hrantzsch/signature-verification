@@ -37,10 +37,8 @@ def get_args():
                         help='Interval for halving the LR [10]')
     parser.add_argument('--out', '-o', default='',
                         help='Name for snapshots and logging')
-    # parser.add_argument('--out', '-o', default='',
-    #                     help='Path to save model snapshots')
-    # parser.add_argument('--log', '-l', default='',
-    #                     help='Log file')
+    parser.add_argument('--weight_decay', '-d', default=0.001, type=float,
+                        help='Rate of weight decay regularization')
 
     parser.add_argument('--initmodel', '-m', default='',
                         help='Initialize the model from given file')
