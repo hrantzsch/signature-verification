@@ -18,6 +18,7 @@ class Logger:
         self.iteration = 0
         self.sum_loss = 0
         self.sum_acc = 0
+        self.sum_mean_dist = 0
         self.current_section = ''
         self.optimizer = optimizer
 
@@ -35,35 +36,43 @@ class Logger:
         serializers.save_hdf5(prefix + ".state", self.optimizer)
         print("Snapshot created")
 
-    def log_iteration(self, label, loss, acc=None):
+    def log_iteration(self, label, loss, acc=None, mean_dist=None):
         self.iteration += 1
 
         print("{} {:04d}:\tloss={:.4f}".format(label, self.iteration, loss),
               end='' if acc is not None else '\r')
         self.sum_loss += loss
         if acc is not None:
-            print(", acc={:.3%}".format(acc), end='\r')
+            print(", acc={:.3%}".format(acc),
+                  end='' if mean_dist is not None else '\r')
             self.sum_acc += acc
+        if mean_dist is not None:
+            print(", dist={:.3}".format(mean_dist), end='\r')
+            self.sum_mean_dist += mean_dist
 
         if self.log_file is not None:
-            self.write_iteration(label, loss, acc)
+            self.write_iteration(label, loss, acc, mean_dist)
 
     def log_mean(self, label):
         print("{} mean\tloss={:.4f}".format(label, self.sum_loss / self.iteration),
               end='' if self.sum_acc > 0 else '\n')
         if self.sum_acc > 0:
-            print(", acc={:.3%}".format(self.sum_acc / self.iteration))
+            print(", acc={:.3%}".format(self.sum_acc / self.iteration),
+                  end='' if self.sum_mean_dist > 0 else '\n')
+        if self.sum_mean_dist > 0:
+            print(", acc={:.3}".format(self.sum_mean_dist / self.iteration))
         self.iteration = 0
         self.sum_loss = 0
         self.sum_acc = 0
+        self.sum_mean_dist = 0
 
-    def write_iteration(self, label, loss, acc):
+    def write_iteration(self, label, loss, acc, mean_dist):
         with open(self.log_file, 'a+') as f:
             if self.current_section != label:
                 f.write("{} [{}]".format(label, self.optimizer.epoch))
                 f.write('\n')
                 self.current_section = label
-            f.write("{},{},{}\n".format(self.iteration, loss, acc))
+            f.write("{},{},{},{}\n".format(self.iteration, loss, acc, mean_dist))
 
     def mark_lr(self):
         with open(self.log_file, 'a+') as f:
