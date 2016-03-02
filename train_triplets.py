@@ -10,6 +10,7 @@ import os
 import numpy as np
 import pickle
 import argparse
+import time
 
 import chainer
 from chainer import cuda
@@ -56,8 +57,10 @@ train, test = helpers.train_test_anchors(args.test, num_classes=NUM_CLASSES)
 
 graph_generated = False
 for _ in range(1, args.epoch + 1):
+    time_started = time.time()
+
     optimizer.new_epoch()
-    print('epoch', optimizer.epoch)
+    print('========\nepoch', optimizer.epoch)
 
     # training
     dl.create_source('train', train, batch_triplets, args.data, skilled=args.skilled)
@@ -74,6 +77,7 @@ for _ in range(1, args.epoch + 1):
             graph_generated = True
 
     logger.log_mean("train")
+    print("iteration time:\t{:.3f} sec".format((time.time() - time_started) / len(train)))
 
     if optimizer.epoch % args.lrinterval == 0:
         optimizer.lr *= 0.5
