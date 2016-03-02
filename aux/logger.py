@@ -60,7 +60,7 @@ class Logger:
             print(", acc={:.3%}".format(self.sum_acc / self.iteration),
                   end='' if self.sum_mean_dist > 0 else '\n')
         if self.sum_mean_dist > 0:
-            print(", acc={:.3}".format(self.sum_mean_dist / self.iteration))
+            print(", dist={:.3}".format(self.sum_mean_dist / self.iteration))
         self.iteration = 0
         self.sum_loss = 0
         self.sum_acc = 0
