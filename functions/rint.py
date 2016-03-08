@@ -5,7 +5,7 @@ from chainer import function
 from chainer.utils import type_check
 
 
-class Sqrt(function.Function):
+class Rint(function.Function):
 
     def check_type_forward(self, in_types):
         type_check.expect(in_types.size() == 1)
@@ -15,18 +15,20 @@ class Sqrt(function.Function):
 
     def forward_cpu(self, inputs):
         x0, = inputs
-        self.root = np.sqrt(x0)
-        return self.root,
+        self.r = np.rint(x0)
+        return self.r.astype(np.int32),
 
     def forward_gpu(self, inputs):
         x0, = inputs
-        self.root = cuda.cupy.sqrt(x0)
-        return self.root,
+        self.r = cuda.cupy.rint(x0)
+        return self.r.astype(cuda.cupy.int32),
 
-    def backward(self, inputs, gy):
-        coeff = 1.0 / 2 * self.root
-        return coeff * gy[0],
+    def backward_cpu(self, inputs, gy):
+        return gy[0].astype(np.float32),
+
+    def backward_gpu(self, inputs, gy):
+        return gy[0].astype(cuda.cupy.float32),
 
 
-def sqrt(x0):
-    return Sqrt()(x0)
+def rint(x0):
+    return Rint()(x0)

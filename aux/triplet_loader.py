@@ -105,6 +105,9 @@ class DataProvider(threading.Thread):
         num_easy_triplets = int(np.floor(self.num_triplets * (1 - skilled)))
         num_skilled_triplets = self.num_triplets - num_easy_triplets
 
+        # NOTE: no_forgeries is switched implicidly here. This can lead to
+        # irritating effects when an already trained model is suddenly fed
+        # forgeries that are labelled as positives.
         easy_triplets = [self.get_easy_triplet(num_skilled_triplets > 0)
                          for _ in range(num_easy_triplets)]
         skilled_triplets = [self.get_skilled_triplet()

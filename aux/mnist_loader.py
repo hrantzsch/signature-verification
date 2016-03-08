@@ -5,8 +5,8 @@ import numpy as np
 from scipy.misc import imread
 
 
-TRAIN_PKL = '/home/hannes/data/mnist/train.pkl'
-TEST_PKL  = '/home/hannes/data/mnist/test.pkl'
+TRAIN_PKL = '/home/hannes/Data/mnist/train_paths.pkl'
+TEST_PKL = '/home/hannes/Data/mnist/test_paths.pkl'
 
 
 class MnistLoader:
@@ -38,7 +38,7 @@ class MnistLoader:
         for i in range(3):
             for j in range(batchsize):
                 paths.append(triplets[j][i])
-        
+
         batch = self.xp.array([imread(path).astype(self.xp.float32)
                               for path in paths], dtype=self.xp.float32)
         return (batch / 255.0)[:, self.xp.newaxis, ...]

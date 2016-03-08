@@ -3,20 +3,24 @@ import chainer.functions as F
 import chainer.links as L
 
 from functions.tripletloss import triplet_loss, triplet_accuracy
+from functions.rint import rint
 from models.embednet_dnn import DnnWithLinear
+from models.alex_dnn import AlexDNN
+from models.mnist_dnn import MnistDnn
 
 
 class EmbedNet(chainer.Chain):
     """"""
 
-    def __init__(self, embed_size):
+    def __init__(self):
         super(EmbedNet, self).__init__(
-            dnn=DnnWithLinear(128),
-            embed=L.EmbedID(embed_size, 128),
+            # dnn=DnnWithLinear(128),
+            dnn=MnistDnn(),
+            embed=L.EmbedID(128000, 64),
         )
         self._train = True
 
-    def __call__(self, x, compute_acc=False):
+    def __call__(self, x, stop=False):
         """
         Forward through DNN, L2 normalization and embedding.
         Returns the triplet loss.
@@ -39,30 +43,25 @@ class EmbedNet(chainer.Chain):
 
         # forward batch through deep network
         h = self.dnn(x)
+
         # Perform L2 normalizationa and embedding
         h = F.batch_l2_norm_squared(h)
-        # TODO scaling?
-        h = self.embed(h)
+        h = self.embed(rint(h))
 
         # split to anchors, positives, and negatives
         anc, pos, neg = F.split_axis(h, 3, 0)
-
         # compute loss
-        self.loss = triplet_loss(anc, pos, neg)
-        if compute_acc:
-            self.accuracy = triplet_accuracy(anc, pos, neg)
+        # self.loss = triplet_loss(anc, pos, neg)
+        dist = (anc - pos)**2 - (anc - neg)**2
+        self.dist = dist.data.sum() / len(dist.data)
+        h = dist + 0.6
+
+        import numpy as np
+        zeros = chainer.Variable(np.zeros_like(h.data, dtype=np.float32))
+        self.loss = F.mean_squared_error(-h, h)
+        self.accuracy = ((anc - pos).data > (anc - neg).data).sum() / ((anc - pos).data > (anc - neg).data).size  # triplet_accuracy(anc, pos, neg).data
+
+        # if stop:
+        #     import pdb; pdb.set_trace()
 
         return self.loss
-
-    def verify(self, x):
-        """
-        Forward two samples through network and embed them.
-        Returns the Eucledean distance.
-        """
-
-        # forward and embed
-        h = self.forward_dnn(x)
-        h = self.forward_embed(h)
-        a, b = F.split_axis(h, 2, 0)
-
-        return F.mean_squared_error(a, b)
