@@ -43,8 +43,7 @@ if args.gpu >= 0:
 
 batch_triplets = args.batchsize  # batchsize will be 3 * batch_triplets
 
-# optimizer = optimizers.MomentumSGD(lr=0.001)
-optimizer = optimizers.AdaGrad(lr=0.01)
+optimizer = optimizers.MomentumSGD(lr=0.001)
 optimizer.setup(model)
 optimizer.add_hook(chainer.optimizer.WeightDecay(args.weight_decay))
 
@@ -62,6 +61,9 @@ for _ in range(1, args.epoch + 1):
     optimizer.new_epoch()
     print('========\nepoch', optimizer.epoch)
 
+    margin = optimizer.epoch**2 * 0.1
+    print('margin: {:.3}'.format(margin))
+
     # training
     dl.create_source('train', train, batch_triplets, args.data, skilled=args.skilled)
     dl.create_source('test', test, batch_triplets, args.data, skilled=args.skilled)
@@ -69,7 +71,7 @@ for _ in range(1, args.epoch + 1):
     for i in range(len(train)):
         x_data = dl.get_batch('train')
         x = chainer.Variable(x_data)
-        optimizer.update(model, x)
+        optimizer.update(model, x, margin)
         logger.log_iteration("train", float(model.loss.data), float(model.accuracy), float(model.mean_dist))
 
         if not graph_generated:
@@ -89,7 +91,7 @@ for _ in range(1, args.epoch + 1):
     # testing
     for i in range(len(test)):
         x = chainer.Variable(dl.get_batch('test'))
-        loss = model(x)
+        loss = model(x, margin)
         logger.log_iteration("test", float(model.loss.data), float(model.accuracy), float(model.mean_dist))
     logger.log_mean("test")
 

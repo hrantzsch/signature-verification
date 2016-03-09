@@ -39,9 +39,9 @@ class TripletNet(chainer.Chain):
         dist_pos = F.expand_dims(F.batch_l2_norm_squared(diff_pos), 1)
         dist_neg = F.expand_dims(F.batch_l2_norm_squared(diff_neg), 1)
 
-        return F.concat((dist_pos, dist_neg))
+        return dist_pos, dist_neg
 
-    def __call__(self, x):
+    def __call__(self, x, margin=0.0):
         """
         Forward through DNN and compute loss and accuracy.
 
@@ -58,7 +58,8 @@ class TripletNet(chainer.Chain):
         | negative_n |
         """
 
-        dist = sqrt(self.distance(x))
+        dist_pos, dist_neg = self.distance(x)
+        dist = sqrt(F.concat((dist_pos + margin, dist_neg)))
 
         # compute loss:
         # calculate softmax on distances as a ratio measure
@@ -66,8 +67,7 @@ class TripletNet(chainer.Chain):
         sm = F.softmax(dist)
         self.loss = mse_zero_one(sm)
 
-        dp, dn = dist.data[..., 0], dist.data[..., 1]
-        self.accuracy = (dp < dn).sum() / len(dist.data)
-        self.mean_dist = (dn - dp).sum() / len(dist.data)
+        self.accuracy = (dist_pos.data + margin < dist_neg.data).sum() / len(dist.data)
+        self.mean_dist = (dist_neg.data - dist_pos.data).sum() / len(dist.data)
 
         return self.loss
