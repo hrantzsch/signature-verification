@@ -26,12 +26,20 @@ class TripletNet(chainer.Chain):
            to 3 batches of size n.
         """
 
+        # # forward batch through deep network
+        # h = self.dnn(x)
+        # h = F.reshape(h, (h.data.shape[0], h.data.shape[1]))
+        #
+        # # split to anchors, positives, and negatives
+        # anc, pos, neg = F.split_axis(h, 3, 0)
+
+        # split first
         # forward batch through deep network
-        h = self.dnn(x)
-        h = F.reshape(h, (h.data.shape[0], h.data.shape[1]))
+        anc, pos, neg = (self.dnn(h) for h in F.split_axis(x, 3, 0))
+        anc, pos, neg = (F.reshape(h, (h.data.shape[0], h.data.shape[1]))
+                         for h in (anc, pos, neg))
 
         # split to anchors, positives, and negatives
-        anc, pos, neg = F.split_axis(h, 3, 0)
 
         # compute distances of anchor to positive and negative, respectively
         diff_pos = anc - pos
@@ -67,7 +75,7 @@ class TripletNet(chainer.Chain):
         sm = F.softmax(dist)
         self.loss = mse_zero_one(sm)
 
-        self.accuracy = (dist_pos.data + margin < dist_neg.data).sum() / len(dist.data)
-        self.mean_dist = (dist_neg.data - dist_pos.data).sum() / len(dist.data)
-
+        self.accuracy = (dist_pos.data + margin < dist_neg.data).sum() \
+            / len(dist_pos.data)
+        self.dist = min(dist_neg.data) - max(dist_pos.data)
         return self.loss

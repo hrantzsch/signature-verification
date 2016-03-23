@@ -18,6 +18,7 @@ from models.tripletnet import TripletNet
 
 
 BATCHS_PP = 2
+GPU = 1  # the hacky way
 
 
 # all_files = []
@@ -31,7 +32,7 @@ BATCHS_PP = 2
 
 def load_batch(files, batchsize, queue, xp):
     print("running {} batches.".format(len(files)/batchsize))
-    with cuda.get_device(1):
+    with cuda.get_device(GPU):
         for i in range(0, len(files), batchsize):
             batch = xp.array([imread(path).astype(xp.float32)
                              for path in files[i:i+batchsize]], dtype=xp.float32)
@@ -66,16 +67,20 @@ def get_next_embedding(dnn):
 
 
 if __name__ == '__main__':
+    if sys.argv[1] == "-h" or sys.argv[1] == "--help":
+        print("Usage:\t{} model input_dir output_dir".format(sys.argv[0]))
+        exit(0)
     model_path = sys.argv[1]
-    dir_path = sys.argv[2]
+    in_dir = sys.argv[2]
+    out_dir = sys.argv[3]
 
-    cuda.get_device(1).use()
+    cuda.get_device(GPU).use()
 
-    data = Data(dir_path, 1080 // BATCHS_PP, cuda.cupy)
+    data = Data(in_dir, 1080 // BATCHS_PP, cuda.cupy)
 
     model = TripletNet(dnn=AlexDNN)
     serializers.load_hdf5(model_path, model)
-    model = model.to_gpu(1)
+    model = model.to_gpu(GPU)
     dnn = model.dnn
 
     p_num = 1
@@ -88,5 +93,5 @@ if __name__ == '__main__':
         # exit(0)
 
         pickle.dump(np.vstack(batches),
-                    open('/data/hannes/GPDSS/batch_{:04d}.pkl'.format(p_num), 'wb'))
+                    open('{}/batch_{:04d}.pkl'.format(out_dir, p_num), 'wb'))
         p_num += 1

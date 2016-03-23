@@ -43,7 +43,7 @@ if args.gpu >= 0:
 
 batch_triplets = args.batchsize  # batchsize will be 3 * batch_triplets
 
-optimizer = optimizers.MomentumSGD(lr=0.001)
+optimizer = optimizers.MomentumSGD(lr=0.0001)
 optimizer.setup(model)
 optimizer.add_hook(chainer.optimizer.WeightDecay(args.weight_decay))
 
@@ -72,7 +72,7 @@ for _ in range(1, args.epoch + 1):
         x_data = dl.get_batch('train')
         x = chainer.Variable(x_data)
         optimizer.update(model, x, margin)
-        logger.log_iteration("train", float(model.loss.data), float(model.accuracy), float(model.mean_dist))
+        logger.log_iteration("train", float(model.loss.data), float(model.accuracy), float(model.dist))
 
         if not graph_generated:
             helpers.write_graph(model.loss)
@@ -92,7 +92,7 @@ for _ in range(1, args.epoch + 1):
     for i in range(len(test)):
         x = chainer.Variable(dl.get_batch('test'))
         loss = model(x, margin)
-        logger.log_iteration("test", float(model.loss.data), float(model.accuracy), float(model.mean_dist))
+        logger.log_iteration("test", float(model.loss.data), float(model.accuracy), float(model.dist))
     logger.log_mean("test")
 
 # make final snapshot if not just taken one

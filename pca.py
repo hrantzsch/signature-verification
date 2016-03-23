@@ -2,6 +2,7 @@
 
 import sys
 import pickle
+import os
 from itertools import chain
 from matplotlib.mlab import PCA
 import matplotlib.pyplot as plt
@@ -19,7 +20,7 @@ from mpl_toolkits.mplot3d import Axes3D
 
 
 def print_usage():
-    print("usage: {} (model | data)".format(sys.argv[0]))
+    print("usage: {} embedded_data_dir".format(sys.argv[0]))
 
 
 def flatten(listOfLists):
@@ -44,17 +45,18 @@ def load_data_mnist(paths, save=False, fname='mnist.pkl'):
 
 
 def plot_pca(pca):
+    import pdb; pdb.set_trace()
     colors = ['b', 'g', 'r', 'k', 'c', 'm', 'y', '#aaaaaa', '#ffa500', '#A52A2A']
     fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    # ax = fig.add_subplot(111)
-    # ax = Axes3D(fig)
+    # ax = fig.add_subplot(111, projection='3d')
+    ax = fig.add_subplot(111)
+    ax = Axes3D(fig)
     for i in range(10):
         start = sum(map(lambda x: len(data[x]), range(i)))
         end = start + len(data[i])
         # ax.scatter(pca.Y[start:end, 0], pca.Y[start:end, 1], pca.Y[start:end, 2],
         #            marker='.', color=colors[i])
-        ax.plot(pca.Y[start:end, 0], pca.Y[start:end, 1], pca.Y[start:end, 2],
+        ax.plot(pca.Y[start:end, 0], pca.Y[start:end, 1], # pca.Y[start:end, 2],
                 '.', markersize=5, alpha=0.1, color=colors[i], label=i)
     plt.legend(numpoints=1)
     # plt.xlabel('x_values')
@@ -70,22 +72,19 @@ if __name__ == '__main__':
     if not len(sys.argv) == 2:
         print_usage()
         exit(0)
-    if ".pkl" in sys.argv[1]:
-        # load from pkl file
-        data = pickle.load(open(sys.argv[1], 'rb'))
-    elif ".model" in sys.argv[1]:
-        # perform embedding
-        # TODO
-        pass
-    else:
-        print_usage()
-        exit(0)
-
-    all_samples = np.concatenate([np.stack(data[c]) for c in range(10)])
-    all_samples = all_samples.reshape(len(all_samples), -1)
-    mean = all_samples.mean(axis=0)
-    cleaned = np.delete(all_samples, np.where(mean == 0), 1)
-
+    data = []
+    count = 0  # limit amount of data...
+    for f in os.listdir(sys.argv[1]):
+        if not '.pkl' in f:
+            continue
+        fn = os.path.join(sys.argv[1], f)
+        data.append(pickle.load(open(fn, 'rb')))
+        count += 1
+        if count > 1000:
+            break
+    data = np.concatenate(data)
+    mean = data.mean(axis=0)
+    cleaned = np.delete(data, np.where(mean == 0), 1)
     pca = PCA(cleaned)
     plot_pca(pca)
 
