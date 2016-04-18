@@ -22,27 +22,49 @@ class AlexDNN(chainer.Chain):
             conv6=L.Convolution2D(128, 64, 2),
         )
         self.train = True
+        self.relu = False
+        self.dropout = True
 
     def clear(self):
         self.loss = None
         self.accuracy = None
 
+    def maybe_do(self, function, x, switch):
+        if switch:
+            return function(x)
+        else:
+            return x
+
+    def maybe_relu(self, x):
+        return self.maybe_do(F.relu,
+                             x, self.relu)
+
+    def maybe_dropout(self, x):
+        return self.maybe_do(lambda d: F.dropout(d, 0.5, self.train),
+                             x, self.dropout)
+
     def __call__(self, x):
         self.clear()
+
         h = self.bn1(self.conv1(x), test=not self.train)
-        h = F.max_pooling_2d(F.relu(h), (3, 5), stride=2)
+        h = F.max_pooling_2d(self.maybe_relu(h), (3, 5), stride=2)
+        h = self.maybe_dropout(h)
 
         h = self.bn2(self.conv2(h), test=not self.train)
-        h = F.relu(h)
+        h = self.maybe_relu(h)
+        h = self.maybe_dropout(h)
 
         h = self.bn3(self.conv3(h), test=not self.train)
-        h = F.max_pooling_2d(F.relu(h), 3, stride=2, pad=1)
+        h = F.max_pooling_2d(self.maybe_relu(h), 3, stride=2, pad=1)
 
         h = self.bn4(self.conv4(h), test=not self.train)
-        h = F.relu(h)
+        h = self.maybe_relu(h)
+        h = self.maybe_dropout(h)
 
         h = self.bn5(self.conv5(h), test=not self.train)
-        h = F.relu(h)
+        h = self.maybe_relu(h)
+        h = self.maybe_dropout(h)
 
-        h = F.relu(self.conv6(h))
+        h = self.maybe_relu(self.conv6(h))
+
         return h
