@@ -4,6 +4,8 @@ from chainer import functions as F
 from functions.mse_zero_one import mse_zero_one
 from functions.sqrt import sqrt
 
+from chainer import cuda
+
 
 class TripletNet(chainer.Chain):
     """
@@ -19,29 +21,17 @@ class TripletNet(chainer.Chain):
             dnn=dnn(),
         )
 
-    def distance(self, x):
-        """Compute anchor-positive distance and anchor-negative distance on a
-           batch of triplets.
-           The batch is forwarded through the network as a whole and then split
-           to 3 batches of size n.
+    def distance(self, anc, pos, neg):
+        """
+        Compute anchor-positive distance and anchor-negative distance on a
+        batch of triplets.
+        The batch is forwarded through the network as a whole and then split
+        to 3 batches of size n.
         """
 
-        # # forward batch through deep network
-        # h = self.dnn(x)
-        # h = F.reshape(h, (h.data.shape[0], h.data.shape[1]))
-        #
-        # # split to anchors, positives, and negatives
-        # anc, pos, neg = F.split_axis(h, 3, 0)
-
-        # split first
-        # forward batch through deep network
-        anc, pos, neg = (self.dnn(h) for h in F.split_axis(x, 3, 0))
         anc, pos, neg = (F.reshape(h, (h.data.shape[0], h.data.shape[1]))
                          for h in (anc, pos, neg))
 
-        # split to anchors, positives, and negatives
-
-        # compute distances of anchor to positive and negative, respectively
         diff_pos = anc - pos
         diff_neg = anc - neg
         dist_pos = F.expand_dims(F.batch_l2_norm_squared(diff_pos), 1)
@@ -49,7 +39,7 @@ class TripletNet(chainer.Chain):
 
         return dist_pos, dist_neg
 
-    def __call__(self, x, margin=0.0):
+    def __call__(self, x, margin=0.0, debug=False):
         """
         Forward through DNN and compute loss and accuracy.
 
@@ -66,7 +56,17 @@ class TripletNet(chainer.Chain):
         | negative_n |
         """
 
-        dist_pos, dist_neg = self.distance(x)
+        # split to anchors, positives, and negatives
+        # forward batch through deep network
+        anc, pos, neg = (self.dnn(h) for h in F.split_axis(x, 3, 0))
+
+        # compute distances of anchor to positive and negative, respectively
+        dist_pos, dist_neg = self.distance(anc, pos, neg)
+        if debug:
+            print("=" * 80)
+            print(dist_pos.data[:5], "\n----\n", dist_neg.data[:5])
+            print("=" * 80)
+
         dist = sqrt(F.concat((dist_pos + margin, dist_neg)))
 
         # compute loss:
@@ -78,4 +78,7 @@ class TripletNet(chainer.Chain):
         self.accuracy = (dist_pos.data + margin < dist_neg.data).sum() \
             / len(dist_pos.data)
         self.dist = min(dist_neg.data) - max(dist_pos.data)
+
+        self.nonzero = cuda.cupy.count_nonzero(anc.data) / anc.data.size
+
         return self.loss
