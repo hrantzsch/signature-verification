@@ -23,7 +23,7 @@ class AlexDNN(chainer.Chain):
         )
         self.train = True
         self.relu = False
-        self.dropout = True
+        self.dropout = False
 
     def clear(self):
         self.loss = None
