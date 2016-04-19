@@ -40,27 +40,29 @@ class Logger:
         self.iteration += 1
 
         print("{} {:04d}:\tloss={:.4f}".format(label, self.iteration, loss),
-              end='' if acc is not None else '\r')
+              end='')
         self.sum_loss += loss
         if acc is not None:
-            print(", acc={:.3%}".format(acc),
-                  end='' if mean_dist is not None else '\r')
+            print(", acc={:.3%}".format(acc), end='')
             self.sum_acc += acc
         if mean_dist is not None:
-            print(", dist={:.3}".format(mean_dist), end='\r')
+            print(", dist={:.3}".format(mean_dist), end='')
             self.sum_mean_dist += mean_dist
+
+        print("      ", end='\r')  # I wonder if there's a better way to pad
 
         if self.log_file is not None:
             self.write_iteration(label, loss, acc, mean_dist)
 
     def log_mean(self, label):
         print("{} mean\tloss={:.4f}".format(label, self.sum_loss / self.iteration),
-              end='' if self.sum_acc > 0 else '\n')
+              end='')
         if self.sum_acc > 0:
-            print(", acc={:.3%}".format(self.sum_acc / self.iteration),
-                  end='' if self.sum_mean_dist > 0 else '\n')
+            print(", acc={:.3%}".format(self.sum_acc / self.iteration), end='')
         if self.sum_mean_dist > 0:
             print(", dist={:.3}".format(self.sum_mean_dist / self.iteration))
+        print()
+
         self.iteration = 0
         self.sum_loss = 0
         self.sum_acc = 0
