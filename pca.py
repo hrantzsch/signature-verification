@@ -19,6 +19,9 @@ from models.mnist_dnn import MnistDnn
 from mpl_toolkits.mplot3d import Axes3D
 
 
+NUM_CLASSES = 1000
+
+
 def print_usage():
     print("usage: {} embedded_data_dir".format(sys.argv[0]))
 
@@ -47,16 +50,16 @@ def load_data_mnist(paths, save=False, fname='mnist.pkl'):
 def plot_pca(pca):
     # colors = ['b', 'g', 'r', 'k', 'c', 'm', 'y', '#aaaaaa', '#ffa500', '#A52A2A']
     fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    # ax = fig.add_subplot(111)
+    # ax = fig.add_subplot(111, projection='3d')
+    ax = fig.add_subplot(111)
     # ax = Axes3D(fig)
-    # for i in range(10):
+    for i in range(NUM_CLASSES):
     #     start = sum(map(lambda x: len(data[x]), range(i)))
     #     end = start + len(data[i])
     #     ax.scatter(pca.Y[start:end, 0], pca.Y[start:end, 1], pca.Y[start:end, 2],
     #                marker='.', color=colors[i])
-    ax.plot(pca.Y[:, 0], pca.Y[:, 1], pca.Y[:, 2],
-            '.', markersize=5, alpha=0.5)
+        ax.plot(pca.Y[1080*i:1080*(i+1), 0], pca.Y[1080*i:1080*(i+1), 1],# pca.Y[1080*i:1080*(i+1), 2],
+                '.', markersize=5, alpha=0.5)
     # plt.legend(numpoints=1)
     # plt.xlabel('x_values')
     # plt.ylabel('y_values')
@@ -79,7 +82,7 @@ if __name__ == '__main__':
         fn = os.path.join(sys.argv[1], f)
         data.append(pickle.load(open(fn, 'rb')))
         count += 1
-        if count > 2000:
+        if count >= NUM_CLASSES:
             break
     data = np.concatenate(data)
     mean = data.mean(axis=0)
