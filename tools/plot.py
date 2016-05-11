@@ -1,6 +1,5 @@
 import argparse
 import matplotlib.pyplot as plt
-from itertools import chain
 
 
 def parse(logfile):
@@ -10,12 +9,15 @@ def parse(logfile):
     acc_train = []
     acc_test = []
     section_acc = []
-    dist_train = []
-    dist_test = []
-    section_dist = []
-    with open(args.logfile, 'r') as logfile:
-        for line in logfile:
-            if line.startswith('#') or line == '\n':  # skip comments and blank lines
+    mean_diff_train = []
+    mean_diff_test = []
+    section_mean_diff = []
+    max_diff_train = []
+    max_diff_test = []
+    section_max_diff = []
+    with open(logfile, 'r') as lf:
+        for line in lf:
+            if line.startswith('#') or line == '\n':  # skip comments and blank
                 continue
             if 'train' in line:
                 if len(section_loss) > 0:
@@ -24,9 +26,12 @@ def parse(logfile):
                 if len(section_acc) > 0:
                     acc_test.append(section_acc)
                     section_acc = []
-                if len(section_dist) > 0:
-                    dist_test.append(section_dist)
-                    section_dist = []
+                if len(section_mean_diff) > 0:
+                    mean_diff_test.append(section_mean_diff)
+                    section_mean_diff = []
+                if len(section_max_diff) > 0:
+                    max_diff_test.append(section_max_diff)
+                    section_max_diff = []
             elif 'test' in line:
                 if len(section_loss) > 0:
                     loss_train.append(section_loss)
@@ -34,24 +39,33 @@ def parse(logfile):
                 if len(section_acc) > 0:
                     acc_train.append(section_acc)
                     section_acc = []
-                if len(section_dist) > 0:
-                    dist_train.append(section_dist)
-                    section_dist = []
+                if len(section_mean_diff) > 0:
+                    mean_diff_train.append(section_mean_diff)
+                    section_mean_diff = []
+                if len(section_max_diff) > 0:
+                    max_diff_train.append(section_max_diff)
+                    section_max_diff = []
             else:
-                it, loss, acc, dist = line.split(',')
+                # it, loss, acc, mean_diff = line.split(','); max_diff = None
+                it, loss, acc, mean_diff, max_diff = line.split(',')
                 section_loss.append(float(loss))
                 if acc is not None:
                     section_acc.append(float(acc))
-                if dist is not None:
-                    section_dist.append(float(dist))
+                if mean_diff is not None:
+                    section_mean_diff.append(float(mean_diff))
+                if max_diff is not None:
+                    section_max_diff.append(float(max_diff))
     if len(section_loss) > 0:
         loss_test.append(section_loss)
     if len(section_acc) > 0:
         acc_test.append(section_acc)
-    if len(section_dist) > 0:
-        dist_test.append(section_dist)
+    if len(section_mean_diff) > 0:
+        mean_diff_test.append(section_mean_diff)
+    if len(section_max_diff) > 0:
+        max_diff_test.append(section_max_diff)
 
-    return loss_train, loss_test, acc_train, acc_test, dist_train, dist_test
+    return loss_train, loss_test, acc_train, acc_test,\
+        mean_diff_train, mean_diff_test, max_diff_train, max_diff_test
 
 
 def avg(l):
@@ -59,15 +73,16 @@ def avg(l):
 
 
 def plot_avg(logfile):
-    loss_train, loss_test, acc_train, acc_test, dist_train, dist_test = parse(logfile)
+    loss_train, loss_test, acc_train, acc_test, mean_diff_train,\
+        mean_diff_test, max_diff_train, max_diff_test = parse(logfile)
 
-    f, axarr = plt.subplots(3, sharex=True)
+    f, axarr = plt.subplots(4, sharex=True)
     x = list(range(1, len(loss_train)+1))
     # x = list(range(len(loss_train)))  # old style starting at epoch 0
 
     axarr[0].plot(x, list(map(avg, loss_train)), '.-', label='train')
     axarr[0].plot(x, list(map(avg, loss_test)), '.-', label='test')
-    # axarr[0].set_ylim([0.45, 0.55])
+    # axarr[0].set_ylim([0.0, 0.15])
     axarr[0].set_title("loss")
     axarr[0].legend(loc='upper right')
 
@@ -76,43 +91,20 @@ def plot_avg(logfile):
         axarr[1].plot(x, list(map(avg, acc_test)), 'g.-')
     axarr[1].set_title("acc")
 
-    if len(dist_train) > 0:
-        axarr[2].plot(x, list(map(avg, dist_train)), '.-')
-        if len(dist_test) > 0:
-            axarr[2].plot(x, list(map(avg, dist_test)), 'g.-')
-        axarr[2].set_title("dist")
-    # axarr[1].set_ylim([0.2, 0.3])
+    if len(mean_diff_train) > 0:
+        axarr[2].plot(x, list(map(avg, mean_diff_train)), '.-')
+        if len(mean_diff_test) > 0:
+            axarr[2].plot(x, list(map(avg, mean_diff_test)), 'g.-')
+        axarr[2].set_title("mean_diff")
+
+    if len(max_diff_train) > 0:
+        axarr[3].plot(x, list(map(avg, max_diff_train)), '.-')
+        if len(max_diff_test) > 0:
+            axarr[3].plot(x, list(map(avg, max_diff_test)), 'g.-')
+        axarr[3].set_title("max_diff")
+    # axarr[1].set_ylim([0.7, 1.0])
 
     plt.show()
-
-
-def plot_test(logfile):
-    _, loss, _, acc = parse(logfile)
-
-    plt.plot(list(map(avg, loss)), label='loss')
-    plt.plot(list(map(avg, acc)), label='acc')
-    plt.legend(loc='upper left')
-    plt.show()
-
-
-def plot_mixed(logfile):
-    loss_train, loss_test, acc_train, acc_test = parse(logfile)
-
-    f, axarr = plt.subplots(2, sharex=True)
-    x = list(range(1, len(loss_train)+1))
-    # x = list(range(len(loss_train)))  # old style starting at epoch 0
-
-    loss_chain = list(chain.from_iterable(loss_train))
-    axarr[0].plot(loss_chain, '-')
-    axarr[0].plot(list(range(1, len(loss_chain)+1, len(loss_chain)//len(loss_train))),
-                  list(map(avg, loss_test)), '.-')
-    acc_chain = list(chain.from_iterable(acc_train))
-    axarr[1].plot(acc_chain, '-')
-    axarr[1].plot(list(range(1, len(acc_chain)+1, len(acc_chain)//len(acc_train))),
-                  list(map(avg, acc_test)), '.-')
-    plt.legend(loc='lower right')
-    plt.show()
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -122,3 +114,30 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     plot_avg(args.logfile)
+
+# def plot_test(logfile):
+#     _, loss, _, acc = parse(logfile)
+#
+#     plt.plot(list(map(avg, loss)), label='loss')
+#     plt.plot(list(map(avg, acc)), label='acc')
+#     plt.legend(loc='upper left')
+#     plt.show()
+#
+#
+# def plot_mixed(logfile):
+#     loss_train, loss_test, acc_train, acc_test = parse(logfile)
+#
+#     f, axarr = plt.subplots(2, sharex=True)
+#     x = list(range(1, len(loss_train)+1))
+#     # x = list(range(len(loss_train)))  # old style starting at epoch 0
+#
+#     loss_chain = list(chain.from_iterable(loss_train))
+#     axarr[0].plot(loss_chain, '-')
+#     axarr[0].plot(list(range(1, len(loss_chain)+1, len(loss_chain)//len(loss_train))),
+#                   list(map(avg, loss_test)), '.-')
+#     acc_chain = list(chain.from_iterable(acc_train))
+#     axarr[1].plot(acc_chain, '-')
+#     axarr[1].plot(list(range(1, len(acc_chain)+1, len(acc_chain)//len(acc_train))),
+#                   list(map(avg, acc_test)), '.-')
+#     plt.legend(loc='lower right')
+#     plt.show()
