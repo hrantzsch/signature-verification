@@ -19,31 +19,29 @@ from chainer import computational_graph as c
 from chainer import links as L
 from chainer import serializers
 
+from tripletembedding.predictors import TripletNet
+from tripletembedding.aux import Logger, load_snapshot
+from tripletembedding.models import SmallDnn
+
 from aux import helpers
 from aux.triplet_loader import TripletLoader
-from aux.logger import Logger
-from aux.logger import load_snapshot
-from models.tripletnet import TripletNet
-from models.hoffer_dnn import HofferDnn
-from models.alex_dnn import AlexDNN
-from models.embednet_dnn import DnnComponent
+from aux.mcyt_loader import McytLoader
+
 
 args = helpers.get_args()
-NUM_CLASSES = 4000
+NUM_CLASSES = 99  # TODO HACK -- first class is never seen
 
 xp = cuda.cupy if args.gpu >= 0 else np
-dl = TripletLoader(xp)
+dl = McytLoader(xp)
 
-model = TripletNet(AlexDNN)
+model = TripletNet(SmallDnn)
 
 if args.gpu >= 0:
     cuda.get_device(args.gpu).use()
     dl.use_device(args.gpu)
     model = model.to_gpu()
 
-batch_triplets = args.batchsize  # batchsize will be 3 * batch_triplets
-
-optimizer = optimizers.MomentumSGD(lr=0.0001)
+optimizer = optimizers.MomentumSGD(lr=0.01)
 optimizer.setup(model)
 optimizer.add_hook(chainer.optimizer.WeightDecay(args.weight_decay))
 
@@ -61,25 +59,28 @@ for _ in range(1, args.epoch + 1):
     optimizer.new_epoch()
     print('========\nepoch', optimizer.epoch)
 
-    margin = optimizer.epoch**2 * 0.1
-    print('margin: {:.3}'.format(margin))
-
     # training
-    dl.create_source('train', train, batch_triplets, args.data, skilled=args.skilled)
-    dl.create_source('test', test, batch_triplets, args.data, skilled=args.skilled)
+    dl.create_source('train',
+                     train, args.batchsize, args.data, skilled=args.skilled)
+    dl.create_source('test',
+                     test, args.batchsize, args.data, skilled=args.skilled)
 
     for i in range(len(train)):
+        model.clean()
         x_data = dl.get_batch('train')
         x = chainer.Variable(x_data)
-        optimizer.update(model, x, margin)
-        logger.log_iteration("train", float(model.loss.data), float(model.accuracy), float(model.dist))
+        optimizer.update(model, x)
+        logger.log_iteration("train",
+                             float(model.loss.data), float(model.accuracy),
+                             float(model.mean_diff), float(model.max_diff))
 
         if not graph_generated:
             helpers.write_graph(model.loss)
             graph_generated = True
 
     logger.log_mean("train")
-    print("iteration time:\t{:.3f} sec".format((time.time() - time_started) / len(train)))
+    print("iteration time:\t{:.3f} sec"
+          .format((time.time() - time_started) / len(train)))
 
     if optimizer.epoch % args.lrinterval == 0 and optimizer.lr > 0.000001:
         optimizer.lr *= 0.5
@@ -91,8 +92,10 @@ for _ in range(1, args.epoch + 1):
     # testing
     for i in range(len(test)):
         x = chainer.Variable(dl.get_batch('test'))
-        loss = model(x, margin)
-        logger.log_iteration("test", float(model.loss.data), float(model.accuracy), float(model.dist))
+        loss = model(x)
+        logger.log_iteration("test",
+                             float(model.loss.data), float(model.accuracy),
+                             float(model.mean_diff), float(model.max_diff))
     logger.log_mean("test")
 
 # make final snapshot if not just taken one
