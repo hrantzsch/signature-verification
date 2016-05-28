@@ -7,3 +7,4 @@ chainer
 Pillow
 matplotlib
 python-dateutil
+-e git+https://github.com/hrantzsch/TripletEmbedding.git#egg=tripletembedding
