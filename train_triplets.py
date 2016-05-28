@@ -27,21 +27,23 @@ from aux import helpers
 from aux.triplet_loader import TripletLoader
 from aux.mcyt_loader import McytLoader
 
+from models.vgg_small import VGGSmall
+
 
 args = helpers.get_args()
-NUM_CLASSES = 99  # TODO HACK -- first class is never seen
+NUM_CLASSES = 4000  # TODO HACK -- first class is never seen
 
 xp = cuda.cupy if args.gpu >= 0 else np
-dl = McytLoader(xp)
+dl = TripletLoader(xp)
 
-model = TripletNet(SmallDnn)
+model = TripletNet(VGGSmall)
 
 if args.gpu >= 0:
     cuda.get_device(args.gpu).use()
     dl.use_device(args.gpu)
     model = model.to_gpu()
 
-optimizer = optimizers.MomentumSGD(lr=0.01)
+optimizer = optimizers.MomentumSGD(lr=0.005)
 optimizer.setup(model)
 optimizer.add_hook(chainer.optimizer.WeightDecay(args.weight_decay))
 
@@ -91,7 +93,7 @@ for _ in range(1, args.epoch + 1):
 
     # testing
     for i in range(len(test)):
-        x = chainer.Variable(dl.get_batch('test'))
+        x = chainer.Variable(dl.get_batch('test'), volatile=True)
         loss = model(x)
         logger.log_iteration("test",
                              float(model.loss.data), float(model.accuracy),
