@@ -25,6 +25,8 @@ from tripletembedding.models import SmallDnn
 
 from embeddings_plot import plot
 
+from models.vgg_small import VGGSmall
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -55,7 +57,7 @@ def get_samples(data_dir):
         if not os.path.isdir(path):
             continue
         files = os.listdir(path)
-        yield (d, [os.path.join(path, f) for f in files if '.png' in f])
+        yield (d, [os.path.join(path, f) for f in files if '.png' in f and not 'cf' in f])
 
 
 def embed_class(xp, model, samples, bs):
@@ -79,7 +81,7 @@ if __name__ == '__main__':
         cuda.get_device(args.gpu).use()
     xp = cuda.cupy if args.gpu >= 0 else np
 
-    model = TripletNet(SmallDnn)
+    model = TripletNet(VGGSmall)
     serializers.load_hdf5(args.model, model)
     model.cnn.train = False
     if args.gpu >= 0:
