@@ -8,7 +8,8 @@ from chainer import optimizers
 from tripletembedding.predictors import TripletNet
 from tripletembedding.aux import Logger, load_snapshot
 
-from aux.hard_negative_loader import HardNegativeLoader, get_samples, EpochDoneException, NotReadyException
+from aux.hard_negative_loader import HardNegativeLoader, get_samples
+from aux.hard_negative_loader import EpochDoneException, NotReadyException
 from aux import helpers
 
 from models.vgg_small_legacy import VGGSmall
@@ -39,7 +40,7 @@ if __name__ == '__main__':
     train, test = construct_data_sets(args.data, False, args.test)
     print("Training set size: {}".format(len(train)))
 
-    dl = HardNegativeLoader(cuda.cupy, train, 4 * args.batchsize)
+    dl = HardNegativeLoader(cuda.cupy, train, int(2.5 * args.batchsize))
 
     model = TripletNet(VGGSmall)
 
@@ -47,9 +48,12 @@ if __name__ == '__main__':
         cuda.get_device(args.gpu).use()
         model = model.to_gpu()
 
-    optimizer = optimizers.MomentumSGD(lr=0.005)
+    optimizer = optimizers.MomentumSGD(lr=0.001)
     optimizer.setup(model)
     optimizer.add_hook(chainer.optimizer.WeightDecay(args.weight_decay))
+
+    # without clipping, gradients for a pretrained model become too large
+    optimizer.add_hook(chainer.optimizer.GradientClipping(10.0))
 
     if args.initmodel and args.resume:
         load_snapshot(args.initmodel, args.resume, model, optimizer)
