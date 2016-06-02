@@ -1,26 +1,10 @@
 import itertools
-import os
 import numpy as np
 from scipy.misc import imread
 from scipy.spatial.distance import cdist
 
 import chainer
 from chainer import cuda
-
-
-def get_samples(data_dir, skilled):
-    """Returns a generator on lists of files per class in directory.
-       skilled indicates whether to include skilled forgeries."""
-    # TODO only works for GPDSS
-    skilled_condition = lambda f: (skilled and 'f' in f) or 'f' not in f
-    for d in os.listdir(data_dir):
-        path = os.path.join(data_dir, d)
-        if not os.path.isdir(path):
-            continue
-        files = os.listdir(path)
-        for f in files:
-            if '.png' in f and skilled_condition(f):
-                yield (d, os.path.join(path, f))
 
 
 class NotReadyException(Exception):

@@ -1,5 +1,6 @@
 import numpy as np
-import time
+import os               # get_samples
+import time             # time stats
 
 import chainer
 from chainer import cuda
@@ -8,20 +9,38 @@ from chainer import optimizers
 from tripletembedding.predictors import TripletNet
 from tripletembedding.aux import Logger, load_snapshot
 
-from aux.hard_negative_loader import HardNegativeLoader, get_samples
+from aux.triplet_loader import TripletLoader
+from aux.hard_negative_loader import HardNegativeLoader
 from aux.hard_negative_loader import EpochDoneException, NotReadyException
 from aux import helpers
 
 from models.vgg_small_legacy import VGGSmall
 
 
-def construct_data_sets(data_dir, skilled, test_ratio):
-    samples = list(get_samples(data_dir, skilled))
-    np.random.shuffle(samples)
-    num_train_samples = int(len(samples) * (1 - test_ratio))
-    train_samples = samples[:num_train_samples]
-    test_samples = samples[num_train_samples:]
-    return train_samples, test_samples
+# def construct_data_sets(data_dir, skilled, test_ratio):
+#     samples = list(get_samples(data_dir, skilled))
+#     np.random.shuffle(samples)
+#     num_train_samples = int(len(samples) * (1 - test_ratio))
+#     train_samples = samples[:num_train_samples]
+#     test_samples = samples[num_train_samples:]
+#     return train_samples, test_samples
+
+
+def get_samples(data_dir, skilled, anchors=[]):
+    """Returns a generator on lists of files per class in directory.
+       skilled indicates whether to include skilled forgeries.
+       If anchors is not [], only use classes in anchors.
+       anchors must be a list of int."""
+    skilled_condition = lambda f: (skilled and 'f' in f) or 'f' not in f
+    anchor_condition = lambda d: anchors == [] or int(d) in anchors
+    for d in os.listdir(data_dir):
+        path = os.path.join(data_dir, d)
+        if not (os.path.isdir(path) and anchor_condition(d)):
+            continue
+        files = os.listdir(path)
+        for f in files:
+            if '.png' in f and skilled_condition(f):
+                yield (d, os.path.join(path, f))
 
 
 def try_get_batch(dl, model, batchsize):
@@ -37,10 +56,13 @@ if __name__ == '__main__':
     args = helpers.get_args()
 
     xp = cuda.cupy if args.gpu >= 0 else np
-    train, test = construct_data_sets(args.data, False, args.test)
+    train_anchors, test_anchors = helpers.train_test_anchors(args.test, 4000)
+    train = list(get_samples(args.data, False, train_anchors))
+
     print("Training set size: {}".format(len(train)))
 
     dl = HardNegativeLoader(cuda.cupy, train, int(2.5 * args.batchsize))
+    dl_test = TripletLoader(xp)
 
     model = TripletNet(VGGSmall)
 
@@ -55,13 +77,22 @@ if __name__ == '__main__':
     # without clipping, gradients for a pretrained model become too large
     optimizer.add_hook(chainer.optimizer.GradientClipping(10.0))
 
+    logger = Logger(args, optimizer, args.out)
+
     if args.initmodel and args.resume:
         load_snapshot(args.initmodel, args.resume, model, optimizer)
         print("Continuing from snapshot. LR: {}".format(optimizer.lr))
+        # testing
+        # dl_test.create_source('test', test_anchors, args.batchsize,
+        #                       args.data, skilled=args.skilled)
 
-    logger = Logger(args, optimizer, args.out)
-
-    dl.prepare_batch(model, args.batchsize)
+        # for i in range(len(test_anchors)):
+        #     x = chainer.Variable(dl_test.get_batch('test'), volatile=True)
+        #     loss = model(x)
+        #     logger.log_iteration("test",
+        #                          float(model.loss.data), float(model.accuracy),
+        #                          float(model.mean_diff), float(model.max_diff))
+        # logger.log_mean("test")
 
     for _ in range(1, args.epoch + 1):
         t_iteration = []
@@ -99,3 +130,22 @@ if __name__ == '__main__':
         print("mean iteration time: {:.2f} sec".format(np.mean(t_iteration)))
         print("mean batch sampling time: {:.2f} sec".format(np.mean(t_get_batch)))
         print("mean update time: {:.2f} sec".format(np.mean(t_update)))
+
+        if optimizer.epoch % args.lrinterval == 0 and optimizer.lr > 0.000001:
+            optimizer.lr *= 0.5
+            logger.mark_lr()
+            print("learning rate decreased to {}".format(optimizer.lr))
+            if optimizer.epoch % args.interval == 0:
+                logger.make_snapshot(model)
+
+        # testing
+        dl_test.create_source('test', test_anchors, args.batchsize,
+                              args.data, skilled=args.skilled)
+
+        for i in range(len(test_anchors)):
+            x = chainer.Variable(dl_test.get_batch('test'), volatile=True)
+            loss = model(x)
+            logger.log_iteration("test",
+                                 float(model.loss.data), float(model.accuracy),
+                                 float(model.mean_diff), float(model.max_diff))
+        logger.log_mean("test")
