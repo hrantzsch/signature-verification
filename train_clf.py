@@ -17,35 +17,9 @@ from chainer import links as L
 from aux import helpers
 from aux.labelled_loader import LabelledLoader
 
-from tripletembedding.aux import Logger
+from tripletembedding.aux import Logger, load_snapshot
 
 from models.vgg_small import VGGSmallConv
-
-
-# def get_args():
-#     parser = argparse.ArgumentParser()
-#     parser.add_argument('data', help='Path to training data')
-#     parser.add_argument('--batchsize', '-b', type=int, default=20,
-#                         help='Learning minibatch size [20]')
-#     parser.add_argument('--epoch', '-e', default=100, type=int,
-#                         help='Number of epochs to learn [100]')
-#     parser.add_argument('--gpu', '-g', default=-1, type=int,
-#                         help='GPU ID (negative value indicates CPU) [-1]')
-#     parser.add_argument('--interval', '-i', default=10, type=int,
-#                         help='Snapshot interval in epochs [10]')
-#     parser.add_argument('--lrinterval', '-l', default=10, type=int,
-#                         help='Interval for halving the LR [10]')
-#     parser.add_argument('--out', '-o', default='',
-#                         help='Name for snapshots and logging')
-#     parser.add_argument('--classes', '-c', default=100,
-#                         help='Number of classes to distinguish [100]')
-#     parser.add_argument('--weight_decay', '-d', default=0.001, type=float,
-#                         help='Rate of weight decay regularization')
-#
-#     # fooo
-#
-#
-#     return parser.parse_args()
 
 
 class VGGClf(chainer.Chain):
@@ -75,7 +49,7 @@ class VGGClf(chainer.Chain):
 if __name__ == '__main__':
     args = helpers.get_args()
 
-    model = VGGClf(100)  # TODO
+    model = VGGClf(4000)  # TODO provide parameter
     xp = cuda.cupy if args.gpu >= 0 else np
     dl = LabelledLoader(xp)
 
@@ -87,6 +61,11 @@ if __name__ == '__main__':
     optimizer = optimizers.MomentumSGD(lr=0.001)
     optimizer.setup(model)
     optimizer.add_hook(chainer.optimizer.WeightDecay(args.weight_decay))
+
+    if args.initmodel and args.resume:
+        load_snapshot(args.initmodel, args.resume, model, optimizer)
+        print("Continuing from snapshot. LR: {}".format(optimizer.lr))
+        logger = Logger(args, optimizer, args.out)
 
     logger = Logger(args, optimizer, args.out)
 
@@ -110,6 +89,13 @@ if __name__ == '__main__':
             logger.log_iteration("train", float(model.loss.data),
                                  float(model.accuracy.data), 0.0, 0.0)
 
+        if optimizer.epoch % args.lrinterval == 0 and optimizer.lr > 0.000001:
+            optimizer.lr *= 0.5
+            logger.mark_lr()
+            print("learning rate decreased to {}".format(optimizer.lr))
+        if optimizer.epoch % args.interval == 0:
+            logger.make_snapshot(model)
+
         # testing
         for _ in range(50):
             data = dl.get_batch('test')
@@ -120,9 +106,9 @@ if __name__ == '__main__':
             t = chainer.Variable(t_data, volatile=True)
             loss = model(x, t)
             logger.log_iteration("test", float(model.loss.data),
-                                 float(model.accuracy), 0.0, 0.0)
+                                 float(model.accuracy.data), 0.0, 0.0)
         logger.log_mean("test")
 
-        # make final snapshot if not just taken one
-        if optimizer.epoch % args.interval != 0:
-            logger.make_snapshot(model)
+    # make final snapshot if not just taken one
+    if optimizer.epoch % args.interval != 0:
+        logger.make_snapshot(model)
