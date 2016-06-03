@@ -63,6 +63,7 @@ class McytDataProvider(threading.Thread):
 
     def get_sample(self, persona, sign_num):
         """Get random variation of the given personal and signature number."""
+        persona -= 1  # adapt from GPDSS, which starts counting at 1
         directory = os.path.join(self.data_dir, "{:04d}".format(persona))
         if sign_num >= 25:  # a forgery
             prefix = "f"

@@ -32,6 +32,17 @@ class LabelledLoader():
                 if '.png' in f:
                     yield (d, os.path.join(path, f))
 
+    def get_samples_forgeries(self, data_dir):
+        """same as get_samples, but only two labels: 0: authentic, 1: forged"""
+        for d in os.listdir(data_dir):
+            path = os.path.join(data_dir, d)
+            if not os.path.isdir(path):
+                continue
+            files = os.listdir(path)
+            for f in files:
+                if '.png' in f:
+                    yield (int('f' in f), os.path.join(path, f))
+
     def create_sources(self, data_dir, batchsize, split=0.9):
         """Create two sources, using <split> of the samples in <data_dir> for
            training and the rest for testing."""
@@ -93,7 +104,12 @@ class DataProvider(threading.Thread):
 
     def get_sample(self, path):
         # flip ?
-        return imread(path, mode='L').astype(self.xp.float32)
+        img = imread(path, mode='L')
+        # if np.random.choice([True, False]):
+        #     img = np.fliplr(img)
+        # if np.random.choice([True, False]):
+        #     img = np.flipud(img)
+        return img.astype(self.xp.float32)
 
     def load_batch(self, paths):
         if self.device is not None:

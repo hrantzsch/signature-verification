@@ -76,7 +76,7 @@ if __name__ == '__main__':
         print('========\nepoch', optimizer.epoch)
 
         # training
-        dl.create_sources(args.data, args.batchsize, 0.9)
+        dl.create_sources(args.data, args.batchsize, 1.0 - args.test)
 
         while True:
             data = dl.get_batch('train')
@@ -88,6 +88,7 @@ if __name__ == '__main__':
             optimizer.update(model, x, t)
             logger.log_iteration("train", float(model.loss.data),
                                  float(model.accuracy.data), 0.0, 0.0)
+        logger.log_mean("train")
 
         if optimizer.epoch % args.lrinterval == 0 and optimizer.lr > 0.000001:
             optimizer.lr *= 0.5
@@ -107,6 +108,7 @@ if __name__ == '__main__':
             loss = model(x, t)
             logger.log_iteration("test", float(model.loss.data),
                                  float(model.accuracy.data), 0.0, 0.0)
+
         logger.log_mean("test")
 
     # make final snapshot if not just taken one
