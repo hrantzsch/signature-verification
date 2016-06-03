@@ -6,22 +6,15 @@ paper, and TripletNet, based on Hoffer, Ailon: "Deep Metric Learning Using
 Triplet Network".
 """
 
-import os
 import numpy as np
-import pickle
-import argparse
 import time
 
 import chainer
 from chainer import cuda
 from chainer import optimizers
-from chainer import computational_graph as c
-from chainer import links as L
-from chainer import serializers
 
 from tripletembedding.predictors import TripletNet
 from tripletembedding.aux import Logger, load_snapshot
-from tripletembedding.models import SmallDnn
 
 from aux import helpers
 from aux.triplet_loader import TripletLoader
@@ -31,7 +24,7 @@ from models.vgg_small import VGGSmall
 
 
 args = helpers.get_args()
-NUM_CLASSES = 4000  # TODO HACK -- first class is never seen
+NUM_CLASSES = 4000
 
 xp = cuda.cupy if args.gpu >= 0 else np
 dl = TripletLoader(xp)
