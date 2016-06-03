@@ -1,3 +1,23 @@
+"""
+This is my standard loader for TripletLoss based training. It provides
+unlabelled batches of triplets, arranged like
+
+        | anchor_1   |
+        | [...]      |
+        | anchor_n   |
+        | positive_1 |
+        | [...]      |
+        | positive_n |
+        | negative_1 |
+        | [...]      |
+        | negative_n |
+
+create_source starts a thread that provides batches of triplets of the given
+anchors in a queue, which can be retrieved using get_batch(source_name).
+
+This loader is tailored to work with the GPDSS data set.
+"""
+
 import os
 import numpy as np
 from scipy.misc import imread
@@ -80,8 +100,8 @@ class DataProvider(threading.Thread):
 
     def get_easy_triplet(self, no_forgeries):
         """Return a valid triplet (anc, pos, neg) of image paths.
-           If no_forgeries is True then no forgeries will be used for anchor and
-           positive. Use this for skilled training.
+           If no_forgeries is True then no forgeries will be used for anchor
+           and positive. Use this for skilled training.
         """
         anc, neg = np.random.choice(self.anchors, 2, replace=False)
         a = self.get_rnd_sample(anc, no_forgeries)

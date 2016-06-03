@@ -1,3 +1,5 @@
+"""Same as triplet_loader, but for the MCYT data set."""
+
 import os
 import numpy as np
 from scipy.misc import imread
