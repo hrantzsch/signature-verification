@@ -58,3 +58,27 @@ class VGGSmall(chainer.Chain):
         h = self.fc1(h)
         h = self.fc2(h)
         return h
+
+
+class VGGClf(chainer.Chain):
+    """Classifying FC layers on top of conv layers"""
+    def __init__(self, num_classes):
+        super(VGGClf, self).__init__(
+            conv=VGGSmallConv(),
+            fc1=L.Linear(4096, 1024),
+            fc2=L.Linear(1024, num_classes)
+        )
+        self.predict = False
+
+    def __call__(self, x, t):
+        h = self.conv(x)
+        h = self.fc1(h)
+        h = self.fc2(h)
+
+        if not self.predict:
+            self.loss = F.softmax_cross_entropy(h, t)
+            self.accuracy = F.accuracy(h, t)
+            return self.loss
+        else:
+            self.pred = F.softmax(h)
+            return self.pred
