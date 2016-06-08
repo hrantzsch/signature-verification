@@ -34,10 +34,11 @@ if __name__ == '__main__':
 
     # === train ===
     print("Training...")
-    nn = KNeighborsClassifier(n_neighbors=5)
+    nn = KNeighborsClassifier(n_neighbors=9)
     nn.fit(X, y)
 
     pickle.dump(nn, open('knn.pkl', 'wb'))
+    # nn = pickle.load(open('knn.pkl', 'rb'))
 
     # === test ===
     print("Testing...")
@@ -46,13 +47,17 @@ if __name__ == '__main__':
     # print("\n========")
     # print("Accuracy: {}".format(sum(correct) / len(correct)))
 
-    correct = 0
-    predictions = np.array(list(map(lambda x: y[x], nbs)))
-    for val in np.unique(yt):
-        this_class = predictions[yt == val].flatten()
-        print("{}: {}".format(val, vote(this_class)))
-        if val == vote(this_class):
-            correct += 1
-    print("Accuracy: {}".format(correct / len(np.unique(yt))))
+    # correct = 0
+    # predictions = nbs 
+    # predictions = np.array(list(map(lambda x: y[x], nbs)))
+    # for val in np.unique(yt):
+    #     import pdb; pdb.set_trace()
+    #     this_class = predictions[yt == val].flatten()
+    #     print("{}: {}".format(val, vote(this_class)))
+    #     if val == vote(this_class):
+    #         correct += 1
+    # print("Accuracy: {}".format(correct / len(np.unique(yt))))
 
+    correct = sum(nbs == yt)
+    print("Accuracy: {}".format(float(correct) / len(yt)))
     import pdb; pdb.set_trace()
