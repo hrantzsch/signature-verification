@@ -20,14 +20,15 @@ from aux import helpers
 from aux.triplet_loader import TripletLoader
 from aux.mcyt_loader import McytLoader
 
-from models.vgg_small import VGGSmall
+from models.vgg_small import VGGSmall, VGGSmallConv, VGGClf
+# import models.vgg_small_legacy as legacy
 
 
 args = helpers.get_args()
-NUM_CLASSES = 4000
+NUM_CLASSES = 90
 
 xp = cuda.cupy if args.gpu >= 0 else np
-dl = TripletLoader(xp)
+dl = McytLoader(xp)
 
 model = TripletNet(VGGSmall)
 
@@ -36,13 +37,21 @@ if args.gpu >= 0:
     dl.use_device(args.gpu)
     model = model.to_gpu()
 
-optimizer = optimizers.MomentumSGD(lr=0.005)
+optimizer = optimizers.MomentumSGD(lr=0.001)
 optimizer.setup(model)
 optimizer.add_hook(chainer.optimizer.WeightDecay(args.weight_decay))
+optimizer.add_hook(chainer.optimizer.GradientClipping(10.0))
 
-if args.initmodel and args.resume:
-    load_snapshot(args.initmodel, args.resume, model, optimizer)
-    print("Continuing from snapshot. LR: {}".format(optimizer.lr))
+# if args.initmodel and args.resume:
+#     load_snapshot(args.initmodel, args.resume, model, optimizer)
+#     print("Continuing from snapshot. LR: {}".format(optimizer.lr))
+
+# load pre-trained CNN
+from chainer import serializers
+pretrained = VGGClf(100)
+serializers.load_hdf5(args.initmodel, pretrained)
+model.cnn.conv.copyparams(pretrained.conv)
+
 logger = Logger(args, optimizer, args.out)
 
 train, test = helpers.train_test_anchors(args.test, num_classes=NUM_CLASSES)
