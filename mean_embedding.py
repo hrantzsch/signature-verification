@@ -93,7 +93,7 @@ if __name__ == '__main__':
         print("embedding", name)
 
         # HACK relabel forgeries
-        genuine = [s for s in samples if 'v' in s]
+        genuine = [s for s in samples if 'f' not in s]
         forgeries = [s for s in samples if 'f' in s]
 
         embedded_g = embed_class(xp, model, genuine, args.batchsize)
