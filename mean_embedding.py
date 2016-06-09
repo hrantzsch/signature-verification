@@ -23,7 +23,7 @@ from chainer import serializers
 from tripletembedding.predictors import TripletNet
 from tripletembedding.models import SmallDnn
 
-from embeddings_plot import plot
+from tools.embeddings_plot import plot
 
 from models.vgg_small import VGGSmall
 
@@ -57,7 +57,8 @@ def get_samples(data_dir):
         if not os.path.isdir(path):
             continue
         files = os.listdir(path)
-        yield (d, [os.path.join(path, f) for f in files if '.png' in f and not 'cf' in f])
+        yield (d, [os.path.join(path, f) for f in files
+                   if '.png' in f and 'cf' not in f])
 
 
 def embed_class(xp, model, samples, bs):
@@ -90,10 +91,19 @@ if __name__ == '__main__':
     embeddings = {}
     for (name, samples) in get_samples(args.data):
         print("embedding", name)
-        embedded = embed_class(xp, model, samples, args.batchsize)
-        if not args.no_mean:
-            embedded = xp.mean(embedded, axis=0)
-        embeddings[name] = embedded
+
+        # HACK relabel forgeries
+        genuine = [s for s in samples if 'v' in s]
+        forgeries = [s for s in samples if 'f' in s]
+
+        embedded_g = embed_class(xp, model, genuine, args.batchsize)
+        embedded_f = embed_class(xp, model, forgeries, args.batchsize)
+
+        # if not args.no_mean:
+        #     embedded = xp.mean(embedded, axis=0)
+        embeddings[name] = embedded_g
+        embeddings[name + '_f'] = embedded_f
+
         if len(embeddings) >= args.classes:
             break
 
