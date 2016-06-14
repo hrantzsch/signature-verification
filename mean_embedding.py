@@ -57,12 +57,13 @@ def get_samples(data_dir):
         if not os.path.isdir(path):
             continue
         files = os.listdir(path)
-        yield (d, [os.path.join(path, f) for f in files
-                   if '.png' in f and 'cf' not in f])
+        yield (d, [os.path.join(path, f) for f in files if '.png' in f])
 
 
 def embed_class(xp, model, samples, bs):
     """embed samples; expects all samples for a class at once"""
+    if len(samples) == 0:
+        print("Error: no samples to embed")
     data = xp.array([imread(s, mode='L') for s in samples], dtype=xp.float32)
     data = data[:, xp.newaxis, ...]
     num_batches = len(data) // bs + 1
