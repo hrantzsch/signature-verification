@@ -38,8 +38,8 @@ if __name__ == '__main__':
     forged_flat = [s for g in forged for s in g.values()]
 
     samples = {
-        'Genuine': {label: genuine_flat for label in range(len(genuine_flat))},
-        'Forged': {label: forged_flat for label in range(len(forged_flat))},
+        'Genuine': {label: genuine_flat[label] for label in range(len(genuine_flat))},
+        'Forged': {label: forged_flat[label] for label in range(len(forged_flat))},
     }
     
     pickle.dump(samples, open(out, 'wb'))
