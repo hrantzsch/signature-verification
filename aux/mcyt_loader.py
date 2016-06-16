@@ -72,7 +72,8 @@ class McytDataProvider(threading.Thread):
             sign_num -= 25
         else:
             prefix = "v"
-        fname = "{:04d}{}{:02d}.png".format(persona, prefix, sign_num)
+        aug_num = np.random.randint(0, 35)
+        fname = "{:04d}{}{:02d}_{:02d}.png".format(persona, prefix, sign_num, aug_num)
         return os.path.join(directory, fname)
 
     def get_rnd_sample(self, persona, no_forgeries=False):
@@ -90,6 +91,10 @@ class McytDataProvider(threading.Thread):
         p = self.get_rnd_sample(anc, no_forgeries)
         n = self.get_rnd_sample(neg)
         return (a, p, n)
+
+    def load_sample(self, path):
+        sample = imread(path)
+        return sample.astype(self.xp.float32)
 
     def get_skilled_triplet(self):
         """Return a triplet where the negative sample is a skilled forgery of
@@ -124,6 +129,6 @@ class McytDataProvider(threading.Thread):
             for j in range(self.num_triplets):
                 paths.append(triplets[j][i])
 
-        batch = self.xp.array([imread(path).astype(self.xp.float32)
+        batch = self.xp.array([self.load_sample(path)
                               for path in paths], dtype=self.xp.float32)
         return (batch / 255.0)[:, self.xp.newaxis, ...]

@@ -2,13 +2,29 @@ import numpy as np
 from skimage.filters import threshold_otsu
 import skimage.transform as tf
 from scipy.misc import imresize, imsave, fromimage, imshow, imread
+from scipy.ndimage import interpolation as ip
 import os
+
+
+def make_folders(root, target_root):
+    for d in os.listdir(root):
+        abs_path = os.path.join(root, d)
+        if os.path.isdir(abs_path):
+            os.makedirs(os.path.join(target_root, d), exist_ok=True)
+            make_folders(abs_path, os.path.join(target_root, d))
 
 
 def binarize(image):
     thresh = threshold_otsu(image)
     binary = image <= thresh
     return binary
+
+
+def normalize(image, new_min, new_max):
+    return (image - np.min(image)) *\
+           (new_max - new_min) /\
+           (np.max(image) - np.min(image)) +\
+           new_min
 
 
 def crop(img):
@@ -22,17 +38,21 @@ def crop(img):
 
 def augment(filename, target_size, angle, distortion):
     # read image
-    img = imread(filename, mode='L') / 255.0
-    img = tf.rotate(img, angle, cval=1.0)
+    img = imread(filename, mode='L')
+
+    # whiten noise
+    img[img > 220.0] = 255.0
+    img = ip.rotate(img, angle, cval=255.0)
 
     # perspective transform
     distortion *= img.shape[0]
     d1 = abs(distortion)
     d2 = 0
 
-    # perspective from left or right at random
+    # from left or right depending on sign
     if distortion < 0:
         d1, d2 = d2, d1
+
     src = np.array((
         (0, d1),
         (0, img.shape[0] - d1),
@@ -52,9 +72,11 @@ def augment(filename, target_size, angle, distortion):
     img = tf.warp(img, tform, output_shape=img.shape, cval=1.0)
 
     # crop, resize, pad
-    pad = 5
-    img = imresize(crop(img), (target_size[0] - pad, target_size[1] - pad))
+    pad = 3
+    img = imresize(crop(img), (target_size[0] - 2*pad, target_size[1] - 2*pad))
     img = np.pad(img, pad, mode='constant', constant_values=255.0)
+
+    img = normalize(img, 0, 1)
 
     return img
 
@@ -80,8 +102,7 @@ if __name__ == "__main__":
     images = list(get_files(imgDir))
     num_imgs = len(images)
 
-    for i in range(0, 100):
-        os.makedirs(os.path.join(outDir, "{:04d}".format(i)), exist_ok=True)
+    make_folders(args.data, args.out)
 
     count = 0
     distortions = [-0.21, -0.14, -0.07, 0, 0.07, 0.14, 0.21]
