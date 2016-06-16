@@ -19,16 +19,17 @@ from tripletembedding.aux import Logger, load_snapshot
 from aux import helpers
 from aux.triplet_loader import TripletLoader
 from aux.mcyt_loader import McytLoader
+from aux.sigcomp_loader import SigCompLoader
 
 from models.vgg_small import VGGSmall, VGGSmallConv, VGGClf
 # import models.vgg_small_legacy as legacy
 
 
 args = helpers.get_args()
-NUM_CLASSES = 90
+NUM_CLASSES = 12
 
 xp = cuda.cupy if args.gpu >= 0 else np
-dl = McytLoader(xp)
+dl = SigCompLoader(xp)
 
 model = TripletNet(VGGSmall)
 
@@ -63,6 +64,10 @@ for _ in range(1, args.epoch + 1):
     optimizer.new_epoch()
     print('========\nepoch', optimizer.epoch)
 
+    # margin = min(3.0, 1.0 + 0.005 * optimizer.epoch**2)
+    # print('margin:\t{}'.format(margin))
+    margin = 1.0
+
     # training
     dl.create_source('train',
                      train, args.batchsize, args.data, skilled=args.skilled)
@@ -70,10 +75,12 @@ for _ in range(1, args.epoch + 1):
                      test, args.batchsize, args.data, skilled=args.skilled)
 
     for i in range(len(train)):
+        model.zerograds()
         model.clean()
         x_data = dl.get_batch('train')
         x = chainer.Variable(x_data)
         optimizer.update(model, x)
+        # optimizer.update(model, x, margin)
         logger.log_iteration("train",
                              float(model.loss.data), float(model.accuracy),
                              float(model.mean_diff), float(model.max_diff))
