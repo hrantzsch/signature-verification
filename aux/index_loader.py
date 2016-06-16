@@ -1,5 +1,11 @@
-"""Same as triplet_loader, but for the SigComp data set.
-   A lot of code copy-pasted from mcyt_loader."""
+"""A triplet loader that works on index files.
+The index file should be a .pkl file that contains the following structure:
+{
+    'Genuine': { label: [absolute sample paths] },
+    'Forged':  { label: [absolute sample paths] }
+}
+where label is an int.
+"""
 
 import pickle
 import numpy as np
@@ -14,7 +20,7 @@ from chainer import cuda
 QUEUE_SIZE = 4
 
 
-class SigCompLoader:
+class IndexLoader:
 
     def __init__(self, array_module):
         self.xp = array_module
@@ -25,15 +31,13 @@ class SigCompLoader:
     def create_source(self, name, anchors, num_triplets, data, skilled):
         """Create a data source, such as for train or test batches, and begin
            filling it with data.
-           Parameter skilled indicates whether skilled forgeries should be re-
-           cognized (if True) or considered positive samples.
+           Parameter skilled indicates whether skilled forgeries should be
+           recognized (if True) or considered positive samples.
         """
-        # if name in self.sources:
-        #     print("Warning: data source exists and will be overwritten.")
         self.sources[name] = queue.Queue(QUEUE_SIZE)
 
-        worker = SigCompDataProvider(self.sources[name], anchors, num_triplets,
-                                     self.xp, self.device, data, skilled)
+        worker = IndexDataProvider(self.sources[name], anchors, num_triplets,
+                                   self.xp, self.device, data, skilled)
         self.workers[name] = worker
         worker.start()
 
@@ -44,7 +48,7 @@ class SigCompLoader:
         self.device = device_id
 
 
-class SigCompDataProvider(threading.Thread):
+class IndexDataProvider(threading.Thread):
 
     def __init__(self, queue, anchors, num_triplets,
                  xp, device, data, skilled):
