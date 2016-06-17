@@ -42,6 +42,7 @@ def augment(filename, target_size, angle, distortion):
 
     # whiten noise
     img[img > 220.0] = 255.0
+
     img = ip.rotate(img, angle, cval=255.0)
 
     # perspective transform
@@ -81,47 +82,71 @@ def augment(filename, target_size, angle, distortion):
     return img
 
 
-def get_files(data_dir, no_forgeries=False):
+def get_files(data_dir, pattern=""):
+    """Get all files that include <pattern>"""
     for (path, _, files) in os.walk(data_dir):
         for f in files:
-            if '.png' in f.lower():
+            if ('.png' in f.lower() or '.jpg' in f.lower()) and \
+               pattern in f:
                 yield os.path.join(path, f)
 
 
 if __name__ == "__main__":
+    # export SCIPY_PIL_IMAGE_VIEWER=feh
     import argparse
 
     parser = argparse.ArgumentParser()
     parser.add_argument('data')
     parser.add_argument('out')
+    parser.add_argument('dataset',
+                        help="Name of the dataset. Supported sets: "
+                        "gpdss, mcyt")
     args = parser.parse_args()
 
+    if args.dataset == "gpdss":
+        g_pattern = 'c-'
+        f_pattern = 'cf-'
+    elif args.dataset == "mcyt":
+        g_pattern = 'v'
+        f_pattern = 'f'
+    else:
+        print("Error: unsupported dataset. Supported dataset: gpdss, mcyt")
+        exit()
+
     imgDir = args.data
-    outDir = args.out
 
-    images = list(get_files(imgDir))
-    num_imgs = len(images)
+    genuines = list(get_files(imgDir, g_pattern))
+    forgeries = list(get_files(imgDir, f_pattern))
+    num_imgs = len(genuines) + len(forgeries)
 
-    make_folders(args.data, args.out)
+    g_target = os.path.join(args.out, 'Genuine')
+    f_target = os.path.join(args.out, 'Forged')
+    os.makedirs(g_target, exist_ok=True)
+    make_folders(args.data, g_target)
+    os.makedirs(f_target, exist_ok=True)
+    make_folders(args.data, f_target)
 
     count = 0
-    distortions = [-0.21, -0.14, -0.07, 0, 0.07, 0.14, 0.21]
-    rotations = [-14, -7, 0, 7, 14]
-    for f in images:
-        num_aug = 0
-        for d in distortions:
-            for rot in rotations:
-                rot += np.random.randint(-3, 4)
+    distortions = [-0.3, 0, 0.3]
+    rotations = [-45, -30, -15, 0, 15, 30, 45]
 
-                print("{:4d}/{:4d} - {}".format(count, num_imgs, f), end='\r')
+    for (base, target) in [(genuines, g_target), (forgeries, f_target)]:
+        for f in base:
+            num_aug = 0
+            for dist in distortions:
+                for rot in rotations:
+                    rot += np.random.randint(-3, 4)
 
-                image = augment(f, (96, 192), rot, d)
+                    print("{:4d}/{:4d} - {}".format(count, num_imgs, f),
+                          end='\r')
 
-                # fname: outdir/persona/sample-name_num-aug.png
-                sample_name = os.path.splitext(os.path.relpath(f, imgDir))[0]
-                fname = "{}_{:02d}.png".format(sample_name, num_aug)
-                fname = os.path.join(outDir, fname)
-                num_aug += 1
+                    image = augment(f, (96, 192), rot, dist)
 
-                imsave(fname, image)
-        count += 1
+                    # fname: outdir/persona/sample-name_num-aug.png
+                    sname = os.path.splitext(os.path.relpath(f, imgDir))[0]
+                    fname = "{}_{:02d}.png".format(sname, num_aug)
+                    fname = os.path.join(target, fname)
+                    num_aug += 1
+
+                    imsave(fname, image)
+            count += 1
