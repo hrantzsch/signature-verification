@@ -60,6 +60,13 @@ def train_test_tuples(test_fraction, num_users):
     return data[:-t], data[-t:]
 
 
-def train_test_anchors(test_fraction, num_classes):
+def train_test_anchors(test_fraction, num_classes, start=1):
     t = int(num_classes * test_fraction)
-    return list(range(1, num_classes+1))[:-t], list(range(1, num_classes+1))[-t:]
+    return (list(range(start, num_classes+start))[:-t],
+            list(range(start, num_classes+start))[-t:])
+
+
+def split_anchors(anchors, test_fraction):
+    """Improved version of train_test_anchors"""
+    t = int(len(anchors) * test_fraction)
+    return anchors[:-t], anchors[-t:]

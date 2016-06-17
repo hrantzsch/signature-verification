@@ -17,6 +17,10 @@ import threading
 from chainer import cuda
 
 
+def anchors_in(data_dict):
+    return list(pickle.load(open(data_dict, 'rb'))['Genuine'].keys())
+
+
 QUEUE_SIZE = 4
 
 
