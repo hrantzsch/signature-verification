@@ -19,17 +19,16 @@ from tripletembedding.aux import Logger, load_snapshot
 from aux import helpers
 from aux.triplet_loader import TripletLoader
 from aux.mcyt_loader import McytLoader
-from aux.sigcomp_loader import SigCompLoader
+from aux.index_loader import IndexLoader, anchors_in
 
 from models.vgg_small import VGGSmall, VGGSmallConv, VGGClf
 # import models.vgg_small_legacy as legacy
 
 
 args = helpers.get_args()
-NUM_CLASSES = 12
 
 xp = cuda.cupy if args.gpu >= 0 else np
-dl = SigCompLoader(xp)
+dl = IndexLoader(xp)
 
 model = TripletNet(VGGSmall)
 
@@ -55,7 +54,7 @@ model.cnn.conv.copyparams(pretrained.conv)
 
 logger = Logger(args, optimizer, args.out)
 
-train, test = helpers.train_test_anchors(args.test, num_classes=NUM_CLASSES)
+train, test = helpers.split_anchors(anchors_in(args.data), args.test)
 
 graph_generated = False
 for _ in range(1, args.epoch + 1):
