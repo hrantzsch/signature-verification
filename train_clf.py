@@ -5,7 +5,6 @@ loss training. Of the trained classifier only the convolutional layers should
 be saved, while the final fully connected layers will be dropped and replaced
 in the tripletloss training.
 """
-import argparse
 import numpy as np
 
 import chainer
@@ -19,37 +18,14 @@ from aux.labelled_loader import LabelledLoader
 
 from tripletembedding.aux import Logger, load_snapshot
 
-from models.vgg_small import VGGSmallConv
-
-
-class VGGClf(chainer.Chain):
-    """Classifying FC layers on top of conv layers"""
-    def __init__(self, num_classes):
-        super(VGGClf, self).__init__(
-            conv=VGGSmallConv(),
-            fc1=L.Linear(4096, 1024),
-            fc2=L.Linear(1024, num_classes)
-        )
-        self.predict = False
-
-    def __call__(self, x, t):
-        h = self.conv(x)
-        h = self.fc1(h)
-        h = self.fc2(h)
-
-        if not self.predict:
-            self.loss = F.softmax_cross_entropy(h, t)
-            self.accuracy = F.accuracy(h, t)
-            return self.loss
-        else:
-            self.pred = F.softmax(h)
-            return self.pred
+from models import vgg_small
+from models import vgg_xs
 
 
 if __name__ == '__main__':
     args = helpers.get_args()
 
-    model = VGGClf(4000)  # TODO provide parameter
+    model = vgg_small.VGGClf(100)  # TODO provide parameter
     xp = cuda.cupy if args.gpu >= 0 else np
     dl = LabelledLoader(xp)
 

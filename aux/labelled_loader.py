@@ -53,7 +53,6 @@ class LabelledLoader():
         num_train_samples = int(len(samples) * split)
         train_samples = samples[:num_train_samples]
         test_samples = samples[num_train_samples:]
-
         # create two providers accordingly
         self.create_source("train", train_samples, batchsize)
         self.create_source("test", test_samples, batchsize)
@@ -74,9 +73,18 @@ class LabelledLoader():
         worker.start()
 
     def get_batch(self, source_name):
-        if self.workers[source_name].empty:
+        """Try to get a batch of data."""
+        # TODO: propagate exception and catch it on the outside
+        try:
+            data = self.sources[source_name].get(timeout=1)
+        except queue.Empty:
             return None
-        return self.sources[source_name].get()
+        return data
+        #     if self.workers[source_name].empty:
+        #         return None
+        #     else:
+        #         return self.get_batch(source_name)
+        # return data
 
     def use_device(self, device_id):
         self.device = device_id
