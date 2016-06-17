@@ -10,13 +10,13 @@ def get_samples(data_dir):
         if not os.path.isdir(path):
             continue
         files = os.listdir(path)
-        yield (d, [os.path.join(path, f) for f in files
-                                         if '.png' in f.lower()])
+        yield (d, [os.path.join(path, f)
+                   for f in files if '.png' in f.lower()])
 
 
 def get_dict(data_dir):
     """returns a dictionary with samples found in data_dir
-       expects data_dir to contain one subfolder per class"""
+       expects data_dir to contain one sub-folder per class"""
     return {int(f[0]): f[1] for f in get_samples(data_dir)}
 
 
@@ -38,8 +38,10 @@ if __name__ == '__main__':
     forged_flat = [s for g in forged for s in g.values()]
 
     samples = {
-        'Genuine': {label: genuine_flat[label] for label in range(len(genuine_flat))},
-        'Forged': {label: forged_flat[label] for label in range(len(forged_flat))},
+        'Genuine': {label: genuine_flat[label]
+                    for label in range(len(genuine_flat))},
+        'Forged': {label: forged_flat[label]
+                   for label in range(len(forged_flat))},
     }
-    
+
     pickle.dump(samples, open(out, 'wb'))

@@ -46,7 +46,7 @@ def embed_class(xp, model, samples, bs):
     if len(samples) == 0:
         print("Error: no samples to embed")
     data = xp.array([imread(s, mode='L') for s in samples], dtype=xp.float32)
-    data = data[:, xp.newaxis, ...]
+    data = (data / 255.0)[:, xp.newaxis, ...]
     num_batches = len(data) // bs + 1
 
     xs = xp.array_split(data, num_batches)
@@ -75,6 +75,7 @@ if __name__ == '__main__':
     embeddings = {}
 
     for user in data['Forged']:
+        print("embedding", user)
         if user > args.classes:
             break
         samples = data['Forged'][user]
@@ -82,6 +83,7 @@ if __name__ == '__main__':
         embeddings["{:04d}_f".format(user)] = embedded
 
     for user in data['Genuine']:
+        print("embedding", user)
         if user > args.classes:
             break
         samples = data['Genuine'][user]

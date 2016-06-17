@@ -65,7 +65,7 @@ def embed_class(xp, model, samples, bs):
     if len(samples) == 0:
         print("Error: no samples to embed")
     data = xp.array([imread(s, mode='L') for s in samples], dtype=xp.float32)
-    data = data[:, xp.newaxis, ...]
+    data = (data / 255.0)[:, xp.newaxis, ...]
     num_batches = len(data) // bs + 1
 
     xs = xp.array_split(data, num_batches)
