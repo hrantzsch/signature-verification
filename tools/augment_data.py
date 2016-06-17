@@ -40,6 +40,9 @@ def augment(filename, target_size, angle, distortion):
     # read image
     img = imread(filename, mode='L')
 
+    # scale down
+    img = imresize(img, 0.5)
+
     # whiten noise
     img[img > 220.0] = 255.0
 
@@ -140,13 +143,18 @@ if __name__ == "__main__":
                     print("{:4d}/{:4d} - {}".format(count, num_imgs, f),
                           end='\r')
 
-                    image = augment(f, (96, 192), rot, dist)
-
                     # fname: outdir/persona/sample-name_num-aug.png
                     sname = os.path.splitext(os.path.relpath(f, imgDir))[0]
                     fname = "{}_{:02d}.png".format(sname, num_aug)
                     fname = os.path.join(target, fname)
                     num_aug += 1
+
+                    if os.path.exists(fname):
+                        # skip files we already augmented
+                        print("skip existing: ", fname)
+                        continue
+
+                    image = augment(f, (96, 192), rot, dist)
 
                     imsave(fname, image)
             count += 1
