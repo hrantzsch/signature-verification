@@ -17,8 +17,12 @@ import threading
 from chainer import cuda
 
 
+def load_dict(data_dict):
+    return pickle.load(open(data_dict, 'rb'))
+
+
 def anchors_in(data_dict):
-    return list(pickle.load(open(data_dict, 'rb'))['Genuine'].keys())
+    return list(load_dict(data_dict)['Genuine'].keys())
 
 
 QUEUE_SIZE = 4
@@ -32,7 +36,7 @@ class IndexLoader:
         self.workers = {}
         self.sources = {}
 
-    def create_source(self, name, anchors, num_triplets, data, skilled):
+    def create_source(self, name, num_triplets, data, skilled):
         """Create a data source, such as for train or test batches, and begin
            filling it with data.
            Parameter skilled indicates whether skilled forgeries should be
@@ -40,13 +44,13 @@ class IndexLoader:
         """
         self.sources[name] = queue.Queue(QUEUE_SIZE)
 
-        worker = IndexDataProvider(self.sources[name], anchors, num_triplets,
+        worker = IndexDataProvider(self.sources[name], num_triplets,
                                    self.xp, self.device, data, skilled)
         self.workers[name] = worker
         worker.start()
 
     def get_batch(self, source_name):
-        return self.sources[source_name].get()
+        return self.sources[source_name].get(timeout=5)
 
     def use_device(self, device_id):
         self.device = device_id
@@ -54,15 +58,15 @@ class IndexLoader:
 
 class IndexDataProvider(threading.Thread):
 
-    def __init__(self, queue, anchors, num_triplets,
+    def __init__(self, queue, num_triplets,
                  xp, device, data, skilled):
         threading.Thread.__init__(self)
         self.queue = queue
-        self.anchors = anchors
+        self.anchors = list(data['Genuine'].keys())
         self.num_triplets = num_triplets
         self.xp = xp
         self.device = device
-        self.data = pickle.load(open(data, 'rb'))
+        self.data = data
         self.skilled = skilled
 
     def run(self):
@@ -100,11 +104,11 @@ class IndexDataProvider(threading.Thread):
         neg = self.get_sample(persona, True)
         return (anc, pos, neg)
 
-    def load_batch(self, num_skilled):
+    def load_batch(self, skilled):
         if self.device is not None:
             cuda.get_device(self.device).use()
 
-        num_easy_triplets = int(np.floor(self.num_triplets * (1 - num_skilled)))
+        num_easy_triplets = int(np.floor(self.num_triplets * (1 - skilled)))
         num_skilled_triplets = self.num_triplets - num_easy_triplets
 
         # NOTE: no_forgeries is switched implicitly here. This can lead to
