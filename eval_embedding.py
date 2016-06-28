@@ -13,7 +13,7 @@ from scipy.spatial.distance import cdist, pdist
 from chainer import cuda
 
 
-AVG = False
+AVG = True
 DIST_METHOD = 'sqeuclidean'
 
 
@@ -126,6 +126,9 @@ def roc(thresholds, data):
 
         fpr = fp / (fp + tn)
         tpr = tp / (tp + fn)
+        fnr = fn / (tp + fn)
+
+        aer = (fpr + fnr) / 2  # Avg Error Rate
 
         if tp + fp == 0:
             # make sure we don't divide by zero
@@ -137,7 +140,7 @@ def roc(thresholds, data):
 
         acc = (tp + tn) / (tp + fp + fn + tn)
 
-        yield (fpr, tpr, f1, acc)
+        yield (fpr, tpr, f1, acc, aer)
 
 
 # ============================================================================
@@ -191,15 +194,18 @@ if __name__ == '__main__':
 
     thresholds = range(0, 310, 1)
     zipped = list(roc(thresholds, data))
-    (fpr, tpr, f1, acc) = zip(*zipped)
+    (fpr, tpr, f1, acc, aer) = zip(*zipped)
 
     best_f1_idx = np.argmax(f1)
     best_acc_idx = np.argmax(acc)
+    best_aer_idx = np.argmin(aer)
 
     print("F1: {:.4f} (threshold = {})".format(f1[best_f1_idx],
                                                thresholds[best_f1_idx]))
     print("Accuracy: {:.4f} (threshold = {})".format(acc[best_acc_idx],
                                                      thresholds[best_acc_idx]))
+    print("AER: {:.4f} (threshold = {})".format(aer[best_aer_idx],
+                                                thresholds[best_aer_idx]))
 
     fig, axes = plt.subplots(2, sharex=True)
     axes[0].plot(thresholds, f1)
