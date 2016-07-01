@@ -45,3 +45,4 @@ if __name__ == '__main__':
     }
 
     pickle.dump(samples, open(out, 'wb'))
+    print("Wrote index to", out)
