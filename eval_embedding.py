@@ -183,20 +183,41 @@ def pdists_for_key(embeddings, k):
 # ============================================================================
 
 
-def logit(x):
-    return np.log(x / (1 - x))
-
-
-def dist_to_score(dist, max_dist=500):
+def dist_to_score(dist, max_dist):
     """Supposed to compute P(target_trial | s)"""
     return max(1 / max_dist, 1 - dist / max_dist)
 
 
-def llr(dist, condition_positive_rate):
-    """Computes log-Likelihood-ratio given a sample's distance and the ratio of
-       condition positive samples in the data."""
-    # TODO provide a max_dist or find a more intelligent way
-    return logit(dist_to_score(dist)) - logit(condition_positive_rate)
+def likelihood(score, bins, bin_edges):
+    """Compute the likelihood to observe a score in a (non)target trial, i.e.
+       P(s | (non)target_trial).
+       `bins` and `bin_edges` should be as obtained from numpy.histogram of the
+       (non)target trial data."""
+    # match sample to bin from histogram data
+    score_bin = np.digitize(score, bin_edges)
+    # likelihood is size_bin / size_all_bins
+    try:
+        return bins[score_bin] / np.sum(bins)
+    except IndexError:  # happens for scores smaller/larger than any we've seen
+        return 0.0
+
+
+def llr(score,
+        target_bins, target_bin_edges,
+        nontarget_bins, nontarget_bin_edges):
+    return np.log(likelihood(score, target_bins, target_bin_edges /
+                  likelihood(score, nontarget_bins, nontarget_bin_edges)))
+
+
+# def logit(x):
+#     return np.log(x / (1 - x))
+
+
+# def llr(dist, condition_positive_rate):
+#     """Computes log-Likelihood-ratio given a sample's distance and the ratio of
+#        condition positive samples in the data."""
+#     # TODO provide a max_dist or find a more intelligent way
+#     return logit(dist_to_score(dist)) - logit(condition_positive_rate)
 
 
 # def dist_to_conf(dist, thresh, mode='step'):
@@ -223,11 +244,11 @@ def llr(dist, condition_positive_rate):
 #         raise Exception('unknown mode')
 
 
-def save_dists(dists, out='distances.txt'):
-    """Save distances to tab delimited txt file. Expects distances as a dict
-       {'Genuine': [...], 'Forged': [...]}, where 'Genuine' contains the
-       target trial llrs."""
-    pass
+# def save_dists(dists, out='distances.txt'):
+#     """Save distances to tab delimited txt file. Expects distances as a dict
+#        {'Genuine': [...], 'Forged': [...]}, where 'Genuine' contains the
+#        target trial llrs."""
+#     pass
 
 
 # ============================================================================
@@ -242,19 +263,19 @@ if __name__ == '__main__':
 
 # ============================================================================
 
-    dists_target = genuine_genuine_dists(data, AVG)
-    dists_target = np.concatenate([dists_target[k].ravel()
-                                   for k in dists_target.keys()])
+    target_dists = genuine_genuine_dists(data, AVG)
+    target_dists = np.concatenate([target_dists[k].ravel()
+                                   for k in target_dists.keys()])
 
-    dists_nontarget = genuine_forgeries_dists(data, AVG)
-    dists_nontarget = np.concatenate([dists_nontarget[k].ravel()
-                                      for k in dists_nontarget.keys()])
+    nontarget_dists = genuine_forgeries_dists(data, AVG)
+    nontarget_dists = np.concatenate([nontarget_dists[k].ravel()
+                                      for k in nontarget_dists.keys()])
 
-    max_dist = np.max(np.concatenate((dists_target, dists_nontarget)))
-    scores_target = list(map(lambda s: dist_to_score(s, max_dist),
-                             dists_target))
-    scores_nontarget = list(map(lambda s: dist_to_score(s, max_dist),
-                            dists_nontarget))
+    max_dist = np.max(np.concatenate((target_dists, nontarget_dists)))
+    target_scores = list(map(lambda s: dist_to_score(s, max_dist),
+                             target_dists))
+    nontarget_scores = list(map(lambda s: dist_to_score(s, max_dist),
+                                nontarget_dists))
 
 # ============================================================================
 
@@ -308,11 +329,11 @@ if __name__ == '__main__':
     roc_plot.scatter([fpr[best_acc_idx]], [tpr[best_acc_idx]],
                      c='r', edgecolor='r', s=50,
                      label='best accuracy: {:.2%} (t = {})'.format(
-                        acc[best_acc_idx], thresholds[best_acc_idx]))
+        acc[best_acc_idx], thresholds[best_acc_idx]))
     roc_plot.scatter([fpr[best_f1_idx]], [tpr[best_f1_idx]],
                      c='g', edgecolor='g', s=50,
                      label='best F1: {:.2%} (t = {})'.format(
-                        f1[best_f1_idx], thresholds[best_f1_idx]))
+        f1[best_f1_idx], thresholds[best_f1_idx]))
     roc_plot.legend(loc='lower right', scatterpoints=1)
 
 
@@ -320,12 +341,70 @@ if __name__ == '__main__':
 # Histograms
 # ============================================================================
 
+    HIST_BINS = 70
     fig, hist_plots = plt.subplots(2)
-    hist_plots[0].hist(scores_target, bins='auto', range=(0.0, 1.0))
+    target_bins, target_bin_edges, patches = \
+        hist_plots[0].hist(target_scores, bins=HIST_BINS, range=(0.0, 1.0))
     hist_plots[0].set_title("Histogram target trials")
-    hist_plots[1].hist(scores_nontarget, bins='auto', range=(0.0, 1.0))
+    nontarget_bins, nontarget_bin_edges, patches = \
+        hist_plots[1].hist(nontarget_scores, bins=HIST_BINS, range=(0.0, 1.0))
     hist_plots[1].set_title("Histogram non-target trials")
+
+    data = target_scores
+    # data = np.random.poisson(2, 1000)
+    fig, poisson_plot = plt.subplots()
+    from scipy.misc import factorial
+    from scipy.optimize import curve_fit, minimize
+    # https://stackoverflow.com/questions/25828184/fitting-to-poisson-histogram#25828558
+
+    def poisson(k, lamb):
+        """poisson pdf, parameter lamb is the fit parameter"""
+        return (lamb**k/factorial(k)) * np.exp(-lamb)
+
+    # def negLogLikelihood(params, data):
+    #     """ the negative log-Likelohood-Function"""
+    #     lnl = - np.sum(np.log(poisson(data, params[0])))
+    #     return lnl
+
+    # # minimize the negative log-Likelihood
+    # result = minimize(negLogLikelihood,  # function to minimize
+    #                   x0=np.ones(1),     # start value
+    #                   args=(data,),      # additional arguments for function
+    #                   method='Powell',   # minimization method, see docs
+    #                   )
+    # # result is a scipy optimize result object, the fit parameters 
+    # # are stored in result.x
+    # print(result)
+
+    # plot poisson-deviation with fitted parameter
+    x_plot = np.linspace(0, 5, len(data))
+
+    # poisson_plot.hist(data, bins=np.arange(15) - 0.5, normed=True)
+    poisson_plot.plot(x_plot, poisson(x_plot, np.mean(data)), 'r-', lw=2)
+
+# ============================================================================
+# PDF
+# ============================================================================
+
+    # fig, pdf_plot = plt.subplots()
+    # NUM_SCORES = np.sum(target_hist[0]) + np.sum(nontarget_hist[0])
+    # pdf_plot.plot(target_hist[1][:-1], target_hist[0] / NUM_SCORES, 'g')
+    # pdf_plot.plot(nontarget_hist[1][:-1], nontarget_hist[0] / NUM_SCORES, 'r')
+    # TODO maybe more interesting on distances histogram
+
+# ============================================================================
+# LLR
+# ============================================================================
+
+    f = lambda s: llr(s, target_bins[0], target_bin_edges[1],
+                      nontarget_bins[0], nontarget_bin_edges[1])
+
+    # TODO: my llr does not work because with my discrete method I have bins in
+    # the histogram with 0 samples, resulting in a P(s | trial) of 0.0. This is
+    # a problem in both target and nontarget trials: log(0 / ...), log(.../ 0)
 
 # ============================================================================
 
+
+# ============================================================================
     plt.show()
