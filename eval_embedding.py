@@ -188,71 +188,48 @@ def pdists_for_key(embeddings, k):
 
 def dist_to_score(dist, max_dist):
     """Supposed to compute P(target_trial | s)"""
-    return max(1 / max_dist, 1 - dist / max_dist)
+    return max(0, 1 - dist / max_dist)
 
 
-def likelihood(score, bins, bin_edges):
-    """Compute the likelihood to observe a score in a (non)target trial, i.e.
-       P(s | (non)target_trial).
-       `bins` and `bin_edges` should be as obtained from numpy.histogram of the
-       (non)target trial data."""
-    # match sample to bin from histogram data
-    score_bin = np.digitize(score, bin_edges)
-    # likelihood is size_bin / size_all_bins
-    try:
-        return bins[score_bin] / np.sum(bins)
-    except IndexError:  # happens for scores smaller/larger than any we've seen
-        return 0.0
+def llr(s, func, target_params, nontarget_params):
+    """Compute the log-likelihood ratio.
+       `s` is either a distance or a score computed from that distance.
+       `target_params` and `nontarget_params` are the parameters to `func`,
+       either for the curve fitted to the (non)target distances or scores.
+    """
+    # TODO: llr(score, target_score_distr, nontarget_score_distr) !=
+    #       llr(dist,  target_dist_distr,  nontarget_dist_distr)
+    return np.log(func(s, *target_params) / func(s, *nontarget_params))
 
 
-def llr(score,
-        target_bins, target_bin_edges,
-        nontarget_bins, nontarget_bin_edges):
-    return np.log(likelihood(score, target_bins, target_bin_edges /
-                  likelihood(score, nontarget_bins, nontarget_bin_edges)))
+# def neglogsigmoid(x):
+#     return -np.log(1 / (1 + np.exp(-x)))
 
 
-# def logit(x):
-#     return np.log(x / (1 - x))
+# def cllr(target_llrs, nontarget_llrs):
+#     # % target trials
+#     # c1 = mean(neglogsigmoid(tar_llrs))/log(2);
+#     # % non_target trials
+#     # c2 = mean(neglogsigmoid(-nontar_llrs))/log(2);
+#     # cllr = (c1+c2)/2;
+#     c1 = np.mean(map(neglogsigmoid, target_llrs)) / np.log(2)
+#     c2 = np.mean(map(neglogsigmoid, nontarget_llrs)) / np.log(2)
+#     return (c1+c2)/2
 
+# ============================================================================
 
-# def llr(dist, condition_positive_rate):
-#     """Computes log-Likelihood-ratio given a sample's distance and the ratio of
-#        condition positive samples in the data."""
-#     # TODO provide a max_dist or find a more intelligent way
-#     return logit(dist_to_score(dist)) - logit(condition_positive_rate)
-
-
-# def dist_to_conf(dist, thresh, mode='step'):
-#     # TODO: I want llr, not conf. How to get the llr from the probability?
-#     # log-likelihood-ratio: This is the logarithm of the ratio between the
-#     # likelihood that the target produced the speech input, and the likelihood
-#     # that a non-target produced the input.
-#     #
-#     # P(gen) / 1 - P(gen) ??
-#     # this is Inf for P(gen) = 1.
-#     # log of that is logit.
-#     # (http://mathworld.wolfram.com/LogitTransformation.html)
-#     #
-#     # likelihood ratio can also describe tpr / fpr
-#     # (http://mathworld.wolfram.com/LikelihoodRatio.html)
-#     # but that doesn't make sense for a single sample
-#     #
-#     if mode == 'step':
-#         return 1.0 if dist <= thresh else 0.0
-#     # if mode == 'linear':
-#     # if mode == 'sigmoid':
-#     # if mode == 'logit':
-#     else:  # default
-#         raise Exception('unknown mode')
-
-
-# def save_dists(dists, out='distances.txt'):
-#     """Save distances to tab delimited txt file. Expects distances as a dict
-#        {'Genuine': [...], 'Forged': [...]}, where 'Genuine' contains the
-#        target trial llrs."""
-#     pass
-
+def write_score(out, target_dists, nontarget_dists,
+                func, target_params, nontarget_params):
+    """Write a score file as expected by the FoCal toolkit[1].
+       [1]: TODO... sorry, not now
+    """
+    with open(out, 'w') as f:
+        for d in target_dists:
+            f.write("1 {} {}\n".format(func(d, *target_params),
+                                       func(d, *nontarget_params)))
+        for d in nontarget_dists:
+            f.write("2 {} {}\n".format(func(d, *target_params),
+                                       func(d, *nontarget_params)))
 
 # ============================================================================
 
@@ -282,7 +259,7 @@ if __name__ == '__main__':
 
 # ============================================================================
 
-    HIST_BINS = 70
+    HIST_BINS = 350
     target_bins, target_bin_edges = np.histogram(target_scores,
                                                  bins=HIST_BINS,
                                                  range=(0.0, 1.0),
@@ -292,8 +269,14 @@ if __name__ == '__main__':
                                                        range=(0.0, 1.0),
                                                        density=True)
 
-    # TODO: normalize to area of 1
-
+    target_dbins, target_dbin_edges = np.histogram(target_dists,
+                                                   bins=HIST_BINS,
+                                                   range=(0.0, max_dist),
+                                                   density=True)
+    nontarget_dbins, nontarget_dbin_edges = np.histogram(nontarget_dists,
+                                                         bins=HIST_BINS,
+                                                         range=(0.0, max_dist),
+                                                         density=True)
 
 # ============================================================================
 
@@ -358,6 +341,19 @@ if __name__ == '__main__':
 # Histograms
 # ============================================================================
 
+    fig, dhist_plots = plt.subplots(2)
+
+    width = 1.0 * (target_dbin_edges[1] - target_dbin_edges[0])
+    center = (target_dbin_edges[:-1] + target_dbin_edges[1:]) / 2
+    dhist_plots[0].bar(center, target_dbins, align='center', width=width)
+
+    width = 1.0 * (nontarget_dbin_edges[1] - nontarget_dbin_edges[0])
+    center = (nontarget_dbin_edges[:-1] + nontarget_dbin_edges[1:]) / 2
+    dhist_plots[1].bar(center, nontarget_dbins, align='center', width=width)
+
+    dhist_plots[0].set_title("Distance histogram target trials")
+    dhist_plots[1].set_title("Distance histogram non-target trials")
+
     fig, hist_plots = plt.subplots(2)
 
     width = 1.0 * (target_bin_edges[1] - target_bin_edges[0])
@@ -368,70 +364,41 @@ if __name__ == '__main__':
     center = (nontarget_bin_edges[:-1] + nontarget_bin_edges[1:]) / 2
     hist_plots[1].bar(center, nontarget_bins, align='center', width=width)
 
-    hist_plots[0].set_title("Histogram target trials")
-    hist_plots[1].set_title("Histogram non-target trials")
-
-    # data = target_scores
-    # # data = np.random.poisson(2, 1000)
-    # fig, poisson_plot = plt.subplots()
-    # from scipy.misc import factorial
-    # from scipy.optimize import curve_fit, minimize
-    # # https://stackoverflow.com/questions/25828184/fitting-to-poisson-histogram#25828558
-
-    # def poisson(k, lamb):
-    #     """poisson pdf, parameter lamb is the fit parameter"""
-    #     return (lamb**k/factorial(k)) * np.exp(-lamb)
-
-    # # def negLogLikelihood(params, data):
-    # #     """ the negative log-Likelohood-Function"""
-    # #     lnl = - np.sum(np.log(poisson(data, params[0])))
-    # #     return lnl
-
-    # # # minimize the negative log-Likelihood
-    # # result = minimize(negLogLikelihood,  # function to minimize
-    # #                   x0=np.ones(1),     # start value
-    # #                   args=(data,),      # additional arguments for function
-    # #                   method='Powell',   # minimization method, see docs
-    # #                   )
-    # # # result is a scipy optimize result object, the fit parameters 
-    # # # are stored in result.x
-    # # print(result)
-
-    # # plot poisson-deviation with fitted parameter
-    # x_plot = np.linspace(0, 5, len(data))
-
-    # # poisson_plot.hist(data, bins=np.arange(15) - 0.5, normed=True)
-    # poisson_plot.plot(x_plot, poisson(x_plot, np.mean(data)), 'r-', lw=2)
-
-    # target_p = np.polyfit(np.linspace(0.0, 1.0, HIST_BINS), target_bins, deg=30)
-
-    # def poly(x, p):
-    #     terms = zip(range(len(p)-1, -1, -1), p)
-    #     return sum(map(lambda term: x**term[0] * term[1], terms))
-
-    # x_plot = np.linspace(0, 1, 100)
-    # y_plot = list(map(lambda x: poly(x, target_p), x_plot))
-    # import pdb; pdb.set_trace()
+    hist_plots[0].set_title("Score histogram target trials")
+    hist_plots[1].set_title("Score histogram non-target trials")
 
 # ============================================================================
 # Weibull distribution fit
 # ============================================================================
 
-    xx = np.linspace(0, 1, 1000)
+    # fit weibull to scores
+    xx = np.linspace(0, 1.0, 500)
 
     target_wb = stats.exponweib.fit(target_scores, 1, 1, scale=2, loc=0)
-    center = (target_bin_edges[:-1] + target_bin_edges[1:]) / 2.
     hist_plots[0].plot(xx, stats.exponweib.pdf(xx, *target_wb), 'r')
 
     nontarget_wb = stats.exponweib.fit(nontarget_scores, 1, 1, scale=2, loc=0)
-    center = (nontarget_bin_edges[:-1] + nontarget_bin_edges[1:]) / 2.
     hist_plots[1].plot(xx, stats.exponweib.pdf(xx, *nontarget_wb), 'r')
 
-    fig, wbs = plt.subplots()
-    wbs.plot(xx, stats.exponweib.cdf(xx, *target_wb), 'g')
-    wbs.plot(xx, stats.exponweib.pdf(xx, *target_wb), 'g')
-    wbs.plot(xx, stats.exponweib.cdf(xx, *nontarget_wb), 'r')
-    wbs.plot(xx, stats.exponweib.pdf(xx, *nontarget_wb), 'r')
+    # fig, wbs = plt.subplots()
+    # wbs.plot(xx, stats.exponweib.cdf(xx, *target_wb), 'g')
+    # wbs.plot(xx, stats.exponweib.pdf(xx, *target_wb), 'g')
+    # wbs.plot(xx, stats.exponweib.cdf(xx, *nontarget_wb), 'r')
+    # wbs.plot(xx, stats.exponweib.pdf(xx, *nontarget_wb), 'r')
+
+    #
+    # fit weibull to distances
+    #
+    xx = np.linspace(0, max_dist, 500)
+
+    target_d_wb = stats.exponweib.fit(target_dists, 1, 1, scale=2, loc=0)
+    yy = stats.exponweib.pdf(xx, *target_d_wb)
+    dhist_plots[0].plot(xx, yy, 'r')
+
+    nontarget_d_wb = stats.exponweib.fit(nontarget_dists, 1, 1, scale=2, loc=0)
+    yy = stats.exponweib.pdf(xx, *nontarget_d_wb)
+    dhist_plots[1].plot(xx, yy, 'r')
+
 
 # ============================================================================
 # Beta distribution fit -- doesn't work that well
@@ -453,18 +420,25 @@ if __name__ == '__main__':
     # TODO maybe more interesting on distances histogram
 
 # ============================================================================
-# LLR
+# LLR computation
 # ============================================================================
 
-    f = lambda s: llr(s, target_bins[0], target_bin_edges[1],
-                      nontarget_bins[0], nontarget_bin_edges[1])
-
-    # TODO: my llr does not work because with my discrete method I have bins in
-    # the histogram with 0 samples, resulting in a P(s | trial) of 0.0. This is
-    # a problem in both target and nontarget trials: log(0 / ...), log(.../ 0)
-
-# ============================================================================
-
+    # target_llrs = list(map(lambda d: llr(d, stats.exponweib.pdf,
+    #                                      target_d_wb, nontarget_d_wb),
+    #                        target_dists))
+    # nontarget_llrs = list(map(lambda d: llr(d, stats.exponweib.pdf,
+    #                                         target_d_wb, nontarget_d_wb),
+    #                           nontarget_dists))
 
 # ============================================================================
+# writing and plotting
+# ============================================================================
+
+    score_out = "out.score"
+    write_score(score_out, target_scores, nontarget_scores,
+                stats.exponweib.pdf, target_wb, nontarget_wb)
+    # write_score(score_out, target_dists, nontarget_dists,
+    #             stats.exponweib.pdf, target_d_wb, nontarget_d_wb)
+    print("Wrote score to", score_out)
+
     plt.show()
