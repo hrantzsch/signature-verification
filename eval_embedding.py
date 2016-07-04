@@ -10,6 +10,9 @@ import pickle
 import sys
 import numpy as np
 from scipy.spatial.distance import cdist, pdist
+from scipy import stats
+from scipy.optimize import fmin
+from scipy.special import gamma as gammaf
 from chainer import cuda
 
 
@@ -279,6 +282,21 @@ if __name__ == '__main__':
 
 # ============================================================================
 
+    HIST_BINS = 70
+    target_bins, target_bin_edges = np.histogram(target_scores,
+                                                 bins=HIST_BINS,
+                                                 range=(0.0, 1.0),
+                                                 density=True)
+    nontarget_bins, nontarget_bin_edges = np.histogram(nontarget_scores,
+                                                       bins=HIST_BINS,
+                                                       range=(0.0, 1.0),
+                                                       density=True)
+
+    # TODO: normalize to area of 1
+
+
+# ============================================================================
+
     print_stats(data)
 
     STEP = 2.0
@@ -336,51 +354,93 @@ if __name__ == '__main__':
         f1[best_f1_idx], thresholds[best_f1_idx]))
     roc_plot.legend(loc='lower right', scatterpoints=1)
 
-
 # ============================================================================
 # Histograms
 # ============================================================================
 
-    HIST_BINS = 70
     fig, hist_plots = plt.subplots(2)
-    target_bins, target_bin_edges, patches = \
-        hist_plots[0].hist(target_scores, bins=HIST_BINS, range=(0.0, 1.0))
+
+    width = 1.0 * (target_bin_edges[1] - target_bin_edges[0])
+    center = (target_bin_edges[:-1] + target_bin_edges[1:]) / 2
+    hist_plots[0].bar(center, target_bins, align='center', width=width)
+
+    width = 1.0 * (nontarget_bin_edges[1] - nontarget_bin_edges[0])
+    center = (nontarget_bin_edges[:-1] + nontarget_bin_edges[1:]) / 2
+    hist_plots[1].bar(center, nontarget_bins, align='center', width=width)
+
     hist_plots[0].set_title("Histogram target trials")
-    nontarget_bins, nontarget_bin_edges, patches = \
-        hist_plots[1].hist(nontarget_scores, bins=HIST_BINS, range=(0.0, 1.0))
     hist_plots[1].set_title("Histogram non-target trials")
 
-    data = target_scores
-    # data = np.random.poisson(2, 1000)
-    fig, poisson_plot = plt.subplots()
-    from scipy.misc import factorial
-    from scipy.optimize import curve_fit, minimize
-    # https://stackoverflow.com/questions/25828184/fitting-to-poisson-histogram#25828558
+    # data = target_scores
+    # # data = np.random.poisson(2, 1000)
+    # fig, poisson_plot = plt.subplots()
+    # from scipy.misc import factorial
+    # from scipy.optimize import curve_fit, minimize
+    # # https://stackoverflow.com/questions/25828184/fitting-to-poisson-histogram#25828558
 
-    def poisson(k, lamb):
-        """poisson pdf, parameter lamb is the fit parameter"""
-        return (lamb**k/factorial(k)) * np.exp(-lamb)
+    # def poisson(k, lamb):
+    #     """poisson pdf, parameter lamb is the fit parameter"""
+    #     return (lamb**k/factorial(k)) * np.exp(-lamb)
 
-    # def negLogLikelihood(params, data):
-    #     """ the negative log-Likelohood-Function"""
-    #     lnl = - np.sum(np.log(poisson(data, params[0])))
-    #     return lnl
+    # # def negLogLikelihood(params, data):
+    # #     """ the negative log-Likelohood-Function"""
+    # #     lnl = - np.sum(np.log(poisson(data, params[0])))
+    # #     return lnl
 
-    # # minimize the negative log-Likelihood
-    # result = minimize(negLogLikelihood,  # function to minimize
-    #                   x0=np.ones(1),     # start value
-    #                   args=(data,),      # additional arguments for function
-    #                   method='Powell',   # minimization method, see docs
-    #                   )
-    # # result is a scipy optimize result object, the fit parameters 
-    # # are stored in result.x
-    # print(result)
+    # # # minimize the negative log-Likelihood
+    # # result = minimize(negLogLikelihood,  # function to minimize
+    # #                   x0=np.ones(1),     # start value
+    # #                   args=(data,),      # additional arguments for function
+    # #                   method='Powell',   # minimization method, see docs
+    # #                   )
+    # # # result is a scipy optimize result object, the fit parameters 
+    # # # are stored in result.x
+    # # print(result)
 
-    # plot poisson-deviation with fitted parameter
-    x_plot = np.linspace(0, 5, len(data))
+    # # plot poisson-deviation with fitted parameter
+    # x_plot = np.linspace(0, 5, len(data))
 
-    # poisson_plot.hist(data, bins=np.arange(15) - 0.5, normed=True)
-    poisson_plot.plot(x_plot, poisson(x_plot, np.mean(data)), 'r-', lw=2)
+    # # poisson_plot.hist(data, bins=np.arange(15) - 0.5, normed=True)
+    # poisson_plot.plot(x_plot, poisson(x_plot, np.mean(data)), 'r-', lw=2)
+
+    # target_p = np.polyfit(np.linspace(0.0, 1.0, HIST_BINS), target_bins, deg=30)
+
+    # def poly(x, p):
+    #     terms = zip(range(len(p)-1, -1, -1), p)
+    #     return sum(map(lambda term: x**term[0] * term[1], terms))
+
+    # x_plot = np.linspace(0, 1, 100)
+    # y_plot = list(map(lambda x: poly(x, target_p), x_plot))
+    # import pdb; pdb.set_trace()
+
+# ============================================================================
+# Weibull distribution fit
+# ============================================================================
+
+    xx = np.linspace(0, 1, 1000)
+
+    target_wb = stats.exponweib.fit(target_scores, 1, 1, scale=2, loc=0)
+    center = (target_bin_edges[:-1] + target_bin_edges[1:]) / 2.
+    hist_plots[0].plot(xx, stats.exponweib.pdf(xx, *target_wb), 'r')
+
+    nontarget_wb = stats.exponweib.fit(nontarget_scores, 1, 1, scale=2, loc=0)
+    center = (nontarget_bin_edges[:-1] + nontarget_bin_edges[1:]) / 2.
+    hist_plots[1].plot(xx, stats.exponweib.pdf(xx, *nontarget_wb), 'r')
+
+    fig, wbs = plt.subplots()
+    wbs.plot(xx, stats.exponweib.cdf(xx, *target_wb), 'g')
+    wbs.plot(xx, stats.exponweib.pdf(xx, *target_wb), 'g')
+    wbs.plot(xx, stats.exponweib.cdf(xx, *nontarget_wb), 'r')
+    wbs.plot(xx, stats.exponweib.pdf(xx, *nontarget_wb), 'r')
+
+# ============================================================================
+# Beta distribution fit -- doesn't work that well
+# ============================================================================
+
+    # target_beta = stats.beta.fit(target_scores)
+    # nontarget_beta = stats.beta.fit(nontarget_scores)
+    # hist_plots[0].plot(xx, stats.beta.pdf(xx, *target_beta), 'g')
+    # hist_plots[1].plot(xx, stats.beta.pdf(xx, *nontarget_beta), 'g')
 
 # ============================================================================
 # PDF
