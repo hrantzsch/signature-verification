@@ -8,6 +8,10 @@ from mpl_toolkits.mplot3d import Axes3D
 
 from chainer import cuda
 
+import seaborn as sns
+sns.set_palette("colorblind")
+sns.set_color_codes("colorblind")
+
 
 def make_pca(data):
     keys = sorted(list(data.keys()))
@@ -19,8 +23,8 @@ def make_pca(data):
     result = {}
     for k in keys:
         k_samples = len(data[k])
-        result[k] = pca.Y[index:index+400]
-        # result[k] = pca.Y[index:index+k_samples]
+        # result[k] = pca.Y[index:index+400]  # limit number of samples per key
+        result[k] = pca.Y[index:index+k_samples]
         index += k_samples
     return result
 
@@ -28,8 +32,7 @@ def make_pca(data):
 def plot(data, num_classes, out, dims=2):
     keys = sorted(list(data.keys()))
 
-    colors = ['b', 'g', 'r', 'k', 'c', 'm', 'y',
-              '#aaaaaa', '#ffa5a5', '#A5002A']
+    colors = ['b', 'g', 'r', 'k', 'c', 'm', 'y']
 
     fig = plt.figure()
     if dims == 2:
@@ -43,7 +46,7 @@ def plot(data, num_classes, out, dims=2):
 
     for i in range(num_classes):
         persona = cuda.cupy.asnumpy(data[keys[i]])
-        c = colors[i % 10]
+        c = colors[i % len(colors)] if '_f' not in keys[i] else '#aaaaaa'
         if dims == 2:
             ax.scatter(persona[:, 0], persona[:, 1],
                        marker='o', s=50, c=c, edgecolor=c, label=keys[i], alpha=0.7)
@@ -61,5 +64,13 @@ if __name__ == '__main__':
 
     # make a pca
     data = make_pca(data)
+
+    # limit to specified keys
+    # keys = list(map(lambda x: '{:04d}'.format(x),
+    #                 [11, 28, 30]
+    #                 ))
+    # data_a = {key: data[key] for key in data.keys() if key in keys}
+    # data_b = {key+'_f': data[key+'_f'] for key in data.keys() if key in keys}
+    # data = {**data_a, **data_b}
 
     plot(data, len(data), None, dims)
