@@ -19,16 +19,73 @@ from tripletembedding.aux import Logger, load_snapshot
 from aux import helpers
 from aux.triplet_loader import TripletLoader
 from aux.mcyt_loader import McytLoader
-from aux.index_loader import IndexLoader, anchors_in
+from aux.index_loader import IndexLoader, load_dict, anchors_in
 
 from models.vgg_small import VGGSmall, VGGSmallConv, VGGClf
+from models.vgg_xs import VGGXSClf, VGGXSEmbed
 # import models.vgg_small_legacy as legacy
+import queue
+
+import pickle
 
 
 args = helpers.get_args()
 
 xp = cuda.cupy if args.gpu >= 0 else np
 dl = IndexLoader(xp)
+
+# - old method -
+# train, test = helpers.split_anchors(anchors_in(args.data), args.test)
+
+# === inter-class split ===
+data = load_dict(args.data)
+
+# - loading existing train/test split for continued training -
+# train_anchors, test_anchors = pickle.load(open('snapshots/16-06-20_vgg_small_triplets/vgg_small_triplets_train_test_split.pkl', 'rb'))
+# - create train and test dictionaries from train/test split -
+# train = {
+#     'Genuine': {label: data['Genuine'][label]
+#                 for label in train_anchors['Genuine'].keys()},
+#     'Forged': {label: data['Forged'][label]
+#                for label in train_anchors['Genuine'].keys()}
+# }
+# test = {
+#     'Genuine': {label: data['Genuine'][label]
+#                 for label in test_anchors['Genuine'].keys()},
+#     'Forged': {label: data['Forged'][label]
+#                for label in test_anchors['Genuine'].keys()}
+# }
+
+# - create new inter-class split -
+all_ancs = list(data['Genuine'].keys())
+np.random.shuffle(all_ancs)
+t = int(len(all_ancs) * args.test)
+train_anchors, test_anchors = all_ancs[:-t], all_ancs[-t:]
+# - create train and test dictionaries from train/test split -
+train = {
+    'Genuine': {label: data['Genuine'][label] for label in train_anchors},
+    'Forged': {label: data['Forged'][label] for label in train_anchors}
+}
+test = {
+    'Genuine': {label: data['Genuine'][label] for label in test_anchors},
+    'Forged': {label: data['Forged'][label] for label in test_anchors}
+}
+
+# === intra-class split -- writer-dependent ===
+# data = load_dict(args.data)
+# train = {group: {} for group in data.keys()}
+# test = {group: {} for group in data.keys()}
+# for group in data.keys():
+#     for label in data[group].keys():
+#         samples = data[group][label]
+#         np.random.shuffle(samples)
+
+#         t = int(len(samples) * args.test)
+#         train[group][label] = samples[:-t]
+#         test[group][label] = samples[-t:]
+
+# - save train/test split -
+pickle.dump([train, test], open(args.out+'_train_test_split.pkl', 'wb'))
 
 model = TripletNet(VGGSmall)
 
