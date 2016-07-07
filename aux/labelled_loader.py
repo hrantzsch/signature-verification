@@ -32,23 +32,45 @@ class LabelledLoader():
                 if '.png' in f:
                     yield (d, os.path.join(path, f))
 
-    def get_samples_forgeries(self, data_dir):
-        """same as get_samples, but only two labels: 0: authentic, 1: forged"""
+    def get_samples_forgeries(self, data_dir, user=''):
+        """same as get_samples, but only two labels: 0: authentic, 1: forged
+           user is used to filter for a single user, '' does not filter."""
         for d in os.listdir(data_dir):
             path = os.path.join(data_dir, d)
-            if not os.path.isdir(path):
-                continue
-            files = os.listdir(path)
-            for f in files:
-                if '.png' in f:
-                    yield (int('f' in f), os.path.join(path, f))
+            classes = os.listdir(path)
+            for c in classes:
+                cpath = os.path.join(path, c)
+                if not os.path.isdir(cpath):
+                    continue
+                if not user in c:
+                    continue
+                files = os.listdir(cpath)
+                for f in files:
+                    if '.png' in f:
+                        yield (int('Forged' in cpath), os.path.join(cpath, f))
+
+    def get_samples_dedicated_forgery(self, data_dir):
+        """similar to get_samples, with the difference that all forgeries
+           go to the same class '0'."""
+        for d in os.listdir(data_dir):
+            path = os.path.join(data_dir, d)
+            classes = os.listdir(path)
+            for c in classes:
+                cpath = os.path.join(path, c)
+                if not os.path.isdir(cpath):
+                    continue
+                files = os.listdir(cpath)
+                for f in files:
+                    if '.png' in f:
+                        label = 0 if 'Forged' in cpath else c
+                        yield (label, os.path.join(cpath, f))
 
     def create_sources(self, data_dir, batchsize, split=0.9):
         """Create two sources, using <split> of the samples in <data_dir> for
            training and the rest for testing."""
 
         # split samples in data_dir to train and test set
-        samples = list(self.get_samples(data_dir))
+        samples = list(self.get_samples_forgeries(data_dir))
         np.random.shuffle(samples)
         num_train_samples = int(len(samples) * split)
         train_samples = samples[:num_train_samples]
