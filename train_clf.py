@@ -25,7 +25,7 @@ from models import vgg_xs
 if __name__ == '__main__':
     args = helpers.get_args()
 
-    model = vgg_small.VGGClf(100)  # TODO provide parameter
+    model = vgg_small.VGGClf(2)  # TODO provide parameter
     xp = cuda.cupy if args.gpu >= 0 else np
     dl = LabelledLoader(xp)
 
@@ -74,7 +74,7 @@ if __name__ == '__main__':
             logger.make_snapshot(model)
 
         # testing
-        for _ in range(50):
+        while True:
             data = dl.get_batch('test')
             if data is None:
                 break
