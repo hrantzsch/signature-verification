@@ -54,8 +54,6 @@ model.cnn.conv.copyparams(pretrained.conv)
 
 logger = Logger(args, optimizer, args.out)
 
-train, test = helpers.split_anchors(anchors_in(args.data), args.test)
-
 graph_generated = False
 for _ in range(1, args.epoch + 1):
     time_started = time.time()
@@ -69,14 +67,19 @@ for _ in range(1, args.epoch + 1):
 
     # training
     dl.create_source('train',
-                     train, args.batchsize, args.data, skilled=args.skilled)
+                     args.batchsize, train, skilled=args.skilled)
     dl.create_source('test',
-                     test, args.batchsize, args.data, skilled=args.skilled)
+                     args.batchsize, test, skilled=args.skilled)
 
-    for i in range(len(train)):
+    while True:
         model.zerograds()
         model.clean()
-        x_data = dl.get_batch('train')
+
+        try:
+            x_data = dl.get_batch('train')
+        except queue.Empty:
+            break
+
         x = chainer.Variable(x_data)
         optimizer.update(model, x)
         # optimizer.update(model, x, margin)
@@ -100,8 +103,11 @@ for _ in range(1, args.epoch + 1):
         logger.make_snapshot(model)
 
     # testing
-    for i in range(len(test)):
-        x = chainer.Variable(dl.get_batch('test'), volatile=True)
+    while True:
+        try:
+            x = chainer.Variable(dl.get_batch('test'), volatile=True)
+        except queue.Empty:
+            break
         loss = model(x)
         logger.log_iteration("test",
                              float(model.loss.data), float(model.accuracy),
