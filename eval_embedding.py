@@ -7,6 +7,7 @@ comparing a class's samples to the respective forgeries.
 """
 
 import pickle
+import subprocess
 import sys
 import numpy as np
 from scipy.spatial.distance import cdist, pdist
@@ -15,6 +16,8 @@ from scipy.optimize import fmin
 from scipy.special import gamma as gammaf
 from chainer import cuda
 
+import seaborn as sns
+sns.set_palette('colorblind')
 
 AVG = True
 DIST_METHOD = 'sqeuclidean'
@@ -375,10 +378,12 @@ if __name__ == '__main__':
     xx = np.linspace(0, 1.0, 500)
 
     target_wb = stats.exponweib.fit(target_scores, 1, 1, scale=2, loc=0)
-    hist_plots[0].plot(xx, stats.exponweib.pdf(xx, *target_wb), 'r')
+    yy = stats.exponweib.pdf(xx, *target_wb)
+    hist_plots[0].plot(xx, yy)
 
     nontarget_wb = stats.exponweib.fit(nontarget_scores, 1, 1, scale=2, loc=0)
-    hist_plots[1].plot(xx, stats.exponweib.pdf(xx, *nontarget_wb), 'r')
+    yy = stats.exponweib.pdf(xx, *nontarget_wb)
+    hist_plots[1].plot(xx, yy)
 
     # fig, wbs = plt.subplots()
     # wbs.plot(xx, stats.exponweib.cdf(xx, *target_wb), 'g')
@@ -386,19 +391,17 @@ if __name__ == '__main__':
     # wbs.plot(xx, stats.exponweib.cdf(xx, *nontarget_wb), 'r')
     # wbs.plot(xx, stats.exponweib.pdf(xx, *nontarget_wb), 'r')
 
-    #
     # fit weibull to distances
-    #
+
     xx = np.linspace(0, max_dist, 500)
 
     target_d_wb = stats.exponweib.fit(target_dists, 1, 1, scale=2, loc=0)
     yy = stats.exponweib.pdf(xx, *target_d_wb)
-    dhist_plots[0].plot(xx, yy, 'r')
+    dhist_plots[0].plot(xx, yy)
 
     nontarget_d_wb = stats.exponweib.fit(nontarget_dists, 1, 1, scale=2, loc=0)
     yy = stats.exponweib.pdf(xx, *nontarget_d_wb)
-    dhist_plots[1].plot(xx, yy, 'r')
-
+    dhist_plots[1].plot(xx, yy)
 
 # ============================================================================
 # Beta distribution fit -- doesn't work that well
@@ -431,7 +434,7 @@ if __name__ == '__main__':
     #                           nontarget_dists))
 
 # ============================================================================
-# writing and plotting
+# FoCal Toolkit
 # ============================================================================
 
     score_out = "out.score"
@@ -440,5 +443,13 @@ if __name__ == '__main__':
     # write_score(score_out, target_dists, nontarget_dists,
     #             stats.exponweib.pdf, target_d_wb, nontarget_d_wb)
     print("Wrote score to", score_out)
+
+    cmd = "java -jar /home/hannes/src/cllr_evaluation/jFocal/VectorCal.jar " \
+          "-analyze -t ./out.score"
+    subprocess.run(cmd.split())
+
+# ============================================================================
+# Plot
+# ============================================================================
 
     plt.show()
