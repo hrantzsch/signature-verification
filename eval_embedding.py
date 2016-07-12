@@ -19,6 +19,7 @@ from chainer import cuda
 import seaborn as sns
 sns.set_palette('colorblind')
 
+
 AVG = True
 DIST_METHOD = 'sqeuclidean'
 
@@ -146,7 +147,7 @@ def roc(thresholds, data):
 
         acc = (tp + tn) / (tp + fp + fn + tn)
 
-        yield (fpr, tpr, f1, acc, aer)
+        yield (fpr, fnr, tpr, f1, acc, aer)
 
 
 # ============================================================================
@@ -239,6 +240,10 @@ def write_score(out, target_dists, nontarget_dists,
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
+    import matplotlib.scale as mscale
+    from tools.ProbitScale import ProbitScale
+
+    mscale.register_scale(ProbitScale)
 
     data_path = sys.argv[1]
     data = pickle.load(open(data_path, 'rb'))
@@ -285,10 +290,10 @@ if __name__ == '__main__':
 
     print_stats(data)
 
-    STEP = 2.0
-    thresholds = np.arange(0.0, 150.0, STEP)
+    STEP = 10.0
+    thresholds = np.arange(0.0, max_dist + STEP, STEP)
     zipped = list(roc(thresholds, data))
-    (fpr, tpr, f1, acc, aer) = zip(*zipped)
+    (fpr, fnr, tpr, f1, acc, aer) = zip(*zipped)
 
     best_f1_idx = np.argmax(f1)
     best_acc_idx = np.argmax(acc)
@@ -433,20 +438,34 @@ if __name__ == '__main__':
     #                                         target_d_wb, nontarget_d_wb),
     #                           nontarget_dists))
 
+
+# ============================================================================
+# DET-Plot
+# ============================================================================
+
+    fig, det_plot = plt.subplots()
+    plt.xscale('probit')
+    plt.yscale('probit')
+    plt.xlim([0, 0.5])
+    plt.ylim([0, 0.5])
+    det_plot.set_title("DET-plot")
+    det_plot.plot(fpr, fnr)
+    det_plot.plot(plt.xticks()[0], plt.yticks()[0], ':')
+
 # ============================================================================
 # FoCal Toolkit
 # ============================================================================
 
-    score_out = "out.score"
-    write_score(score_out, target_scores, nontarget_scores,
-                stats.exponweib.pdf, target_wb, nontarget_wb)
+    # score_out = "out.score"
+    # # write_score(score_out, target_scores, nontarget_scores,
+    # #             stats.exponweib.pdf, target_wb, nontarget_wb)
     # write_score(score_out, target_dists, nontarget_dists,
     #             stats.exponweib.pdf, target_d_wb, nontarget_d_wb)
-    print("Wrote score to", score_out)
+    # print("Wrote score to", score_out)
 
-    cmd = "java -jar /home/hannes/src/cllr_evaluation/jFocal/VectorCal.jar " \
-          "-analyze -t ./out.score"
-    subprocess.run(cmd.split())
+    # cmd = "java -jar /home/hannes/src/cllr_evaluation/jFocal/VectorCal.jar " \
+    #       "-analyze -t ./out.score"
+    # subprocess.run(cmd.split())
 
 # ============================================================================
 # Plot
