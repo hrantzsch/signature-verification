@@ -1,5 +1,8 @@
 import argparse
 import matplotlib.pyplot as plt
+import seaborn as sns
+sns.set_palette("colorblind")
+sns.set_color_codes("colorblind")
 
 
 def parse(logfile):
