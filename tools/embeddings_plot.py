@@ -24,19 +24,27 @@ def make_pca(data):
     for k in keys:
         k_samples = len(data[k])
         # result[k] = pca.Y[index:index+400]  # limit number of samples per key
-        result[k] = pca.Y[index:index+k_samples]
+        result[k] = pca.Y[index:index + k_samples]
         index += k_samples
     return result
+
+
+def get_label(name):
+    return "User {} {}".format(int(name[:4]),
+                               "Forgery" if '_f' in name else "Genuine")
 
 
 def plot(data, num_classes, out, dims=2):
     keys = sorted(list(data.keys()))
 
-    colors = ['b', 'g', 'r', 'k', 'c', 'm', 'y']
+    colors = ['b', 'b', 'g', 'g', 'r', 'r', 'k', 'c', 'm', 'y']
+    # colors = ['b', 'g', 'r', 'k', 'c', 'm', 'y']
 
     fig = plt.figure()
     if dims == 2:
         ax = fig.add_subplot(111)
+        ax.set_xlim([-20, 10])
+        ax.set_ylim([-10, 10])
     elif dims == 3:
         ax = fig.add_subplot(111, projection='3d')
         ax = Axes3D(fig)
@@ -46,17 +54,21 @@ def plot(data, num_classes, out, dims=2):
 
     for i in range(num_classes):
         persona = cuda.cupy.asnumpy(data[keys[i]])
-        c = colors[i % len(colors)] if '_f' not in keys[i] else '#aaaaaa'
+        c = colors[i % len(colors)] if '_f' not in keys[i] else 'gray'
+        ec = colors[i % len(colors)] if '_f' in keys[i] else 'white'
+        lw = 0.2 if '_f' not in keys[i] else 1.5
         if dims == 2:
             ax.scatter(persona[:, 0], persona[:, 1],
-                       marker='o', s=50, c=c, edgecolor=c, label=keys[i], alpha=0.7)
+                       marker='o', s=100, c=c, edgecolor=ec,
+                       label=get_label(keys[i]), alpha=1.0, linewidth=lw)
         else:
             ax.scatter(persona[:, 0], persona[:, 1], persona[:, 2],
-                       marker='o', s=50, c=c, edgecolor=c, label=keys[i], alpha=0.7)
+                       marker='o', s=100, c=c, edgecolor=ec,
+                       label=get_label(keys[i]), alpha=1.0, linewidth=lw)
     plt.legend()
-    plt.show()
     if out is not None:
-        plt.savefig(out)
+        plt.savefig(out, dpi=180)
+    plt.show()
 
 if __name__ == '__main__':
     data = pickle.load(open(sys.argv[1], 'rb'))
@@ -66,11 +78,12 @@ if __name__ == '__main__':
     data = make_pca(data)
 
     # limit to specified keys
-    # keys = list(map(lambda x: '{:04d}'.format(x),
-    #                 [11, 28, 30]
-    #                 ))
-    # data_a = {key: data[key] for key in data.keys() if key in keys}
-    # data_b = {key+'_f': data[key+'_f'] for key in data.keys() if key in keys}
-    # data = {**data_a, **data_b}
+    keys = list(map(lambda x: '{:04d}'.format(x),
+                    [1, 2, 3]
+                    ))
+    data_a = {key: data[key] for key in data.keys() if key in keys}
+    data_b = {key + '_f': data[key + '_f']
+              for key in data.keys() if key in keys}
+    data = {**data_a, **data_b}
 
-    plot(data, len(data), None, dims)
+    plot(data, len(data), "plot.png", dims)
