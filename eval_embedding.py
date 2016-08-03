@@ -18,9 +18,11 @@ from chainer import cuda
 
 import seaborn as sns
 sns.set_palette('colorblind')
+sns.set_color_codes("colorblind")
 
 
 AVG = True
+NUM_REF = 12  # 12 is used in the ICDAR SigWiComp 2013 Dutch Offline challenge
 DIST_METHOD = 'sqeuclidean'
 
 
@@ -91,10 +93,15 @@ def genuine_genuine_dists(data, average):
             for i in range(len(gen)):
                 others = list(range(len(gen)))
                 others.remove(i)
+                # choose NUM_REF of others for reference
+                # fails (and should fail) if len(others) < NUM_REF
+                others = np.random.choice(others, replace=False, size=NUM_REF)
                 gen_mean.append(np.mean(gen[others], axis=0))
             dists[k] = cdist(gen_mean, gen, DIST_METHOD)
         else:
-            dists[k] = cdist(gen, gen, DIST_METHOD)
+            d = np.unique(cdist(gen, gen, DIST_METHOD))
+            dists[k] = d[d != 0]  # remove same sample comparisons
+            # dists[k] = cdist(gen, gen, DIST_METHOD)
     return dists
 
 
@@ -131,9 +138,9 @@ def roc(thresholds, data):
         tn = true_negatives(gen_forge_dists, i)
         fn = false_negatives(gen_gen_dists, i)
 
-        fpr = fp / (fp + tn)
-        tpr = tp / (tp + fn)
-        fnr = fn / (tp + fn)
+        fpr = fp / (fp + tn)  # FAR
+        tpr = tp / (tp + fn)  # TAR
+        fnr = fn / (tp + fn)  # FRR
 
         aer = (fpr + fnr) / 2  # Avg Error Rate
 
@@ -192,7 +199,8 @@ def pdists_for_key(embeddings, k):
 
 def dist_to_score(dist, max_dist):
     """Supposed to compute P(target_trial | s)"""
-    return max(0, 1 - dist / max_dist)
+    return max(0, 2 * dist / max_dist)
+    # return max(0, 1 - dist / max_dist)
 
 
 def llr(s, func, target_params, nontarget_params):
@@ -225,7 +233,9 @@ def llr(s, func, target_params, nontarget_params):
 def write_score(out, target_dists, nontarget_dists,
                 func, target_params, nontarget_params):
     """Write a score file as expected by the FoCal toolkit[1].
-       [1]: TODO... sorry, not now
+       [1]: Brummer, Niko, and David A. Van Leeuwen. "On calibration of
+            language recognition scores." 2006 IEEE Odyssey-The Speaker and
+            Language Recognition Workshop. IEEE, 2006.
     """
     with open(out, 'w') as f:
         for d in target_dists:
@@ -267,7 +277,7 @@ if __name__ == '__main__':
 
 # ============================================================================
 
-    HIST_BINS = 350
+    HIST_BINS = 50  # 50 seems to be good for visualization
     target_bins, target_bin_edges = np.histogram(target_scores,
                                                  bins=HIST_BINS,
                                                  range=(0.0, 1.0),
@@ -290,7 +300,7 @@ if __name__ == '__main__':
 
     print_stats(data)
 
-    STEP = 10.0
+    STEP = 1.0
     thresholds = np.arange(0.0, max_dist + STEP, STEP)
     zipped = list(roc(thresholds, data))
     (fpr, fnr, tpr, f1, acc, aer) = zip(*zipped)
@@ -298,13 +308,21 @@ if __name__ == '__main__':
     best_f1_idx = np.argmax(f1)
     best_acc_idx = np.argmax(acc)
     best_aer_idx = np.argmin(aer)
+    eer_idx = np.argmin(np.abs(np.array(fpr) - np.array(fnr)))
 
     print("F1: {:.4f} (threshold = {})".format(f1[best_f1_idx],
                                                thresholds[best_f1_idx]))
     print("Accuracy: {:.4f} (threshold = {})".format(acc[best_acc_idx],
                                                      thresholds[best_acc_idx]))
-    print("AER: {:.4f} (threshold = {})".format(aer[best_aer_idx],
-                                                thresholds[best_aer_idx]))
+    print("AER: {:.4f} (fpr = {}, fnr = {}, t = {})"
+          .format(aer[best_aer_idx],
+                  fpr[best_aer_idx],
+                  fnr[best_aer_idx],
+                  thresholds[best_aer_idx]))
+
+    print("EER: acc = {} fpr = {}, fnr = {}, t = {})"
+          .format(acc[eer_idx], fpr[eer_idx], fnr[eer_idx],
+                  thresholds[eer_idx]))
 
 # ============================================================================
 # F1 score and Accuracy
@@ -384,11 +402,11 @@ if __name__ == '__main__':
 
     target_wb = stats.exponweib.fit(target_scores, 1, 1, scale=2, loc=0)
     yy = stats.exponweib.pdf(xx, *target_wb)
-    hist_plots[0].plot(xx, yy)
+    hist_plots[0].plot(xx, yy, 'r')
 
     nontarget_wb = stats.exponweib.fit(nontarget_scores, 1, 1, scale=2, loc=0)
     yy = stats.exponweib.pdf(xx, *nontarget_wb)
-    hist_plots[1].plot(xx, yy)
+    hist_plots[1].plot(xx, yy, 'r')
 
     # fig, wbs = plt.subplots()
     # wbs.plot(xx, stats.exponweib.cdf(xx, *target_wb), 'g')
@@ -397,16 +415,15 @@ if __name__ == '__main__':
     # wbs.plot(xx, stats.exponweib.pdf(xx, *nontarget_wb), 'r')
 
     # fit weibull to distances
-
     xx = np.linspace(0, max_dist, 500)
 
     target_d_wb = stats.exponweib.fit(target_dists, 1, 1, scale=2, loc=0)
     yy = stats.exponweib.pdf(xx, *target_d_wb)
-    dhist_plots[0].plot(xx, yy)
+    dhist_plots[0].plot(xx, yy, 'r')
 
     nontarget_d_wb = stats.exponweib.fit(nontarget_dists, 1, 1, scale=2, loc=0)
     yy = stats.exponweib.pdf(xx, *nontarget_d_wb)
-    dhist_plots[1].plot(xx, yy)
+    dhist_plots[1].plot(xx, yy, 'r')
 
 # ============================================================================
 # Beta distribution fit -- doesn't work that well
@@ -456,16 +473,42 @@ if __name__ == '__main__':
 # FoCal Toolkit
 # ============================================================================
 
-    # score_out = "out.score"
-    # # write_score(score_out, target_scores, nontarget_scores,
-    # #             stats.exponweib.pdf, target_wb, nontarget_wb)
+    # score_out = "dists.score"
     # write_score(score_out, target_dists, nontarget_dists,
     #             stats.exponweib.pdf, target_d_wb, nontarget_d_wb)
     # print("Wrote score to", score_out)
 
     # cmd = "java -jar /home/hannes/src/cllr_evaluation/jFocal/VectorCal.jar " \
-    #       "-analyze -t ./out.score"
+    #       "-analyze -t " + score_out
     # subprocess.run(cmd.split())
+
+    score_out = "scores.score"
+    write_score(score_out, target_scores, nontarget_scores,
+                stats.exponweib.pdf, target_wb, nontarget_wb)
+    print("Wrote score to", score_out)
+
+    cmd = "java -jar /home/hannes/src/cllr_evaluation/jFocal/VectorCal.jar " \
+          "-analyze -t " + score_out
+    subprocess.run(cmd.split())
+
+# ============================================================================
+# Score and Dist LLRs
+# ============================================================================
+
+    # dists = np.linspace(0, 500.0, 500)
+    # dist_llrs = list(map(
+    # lambda s: np.log(stats.exponweib.pdf(s, *target_d_wb) /
+    #                   stats.exponweib.pdf(s, *nontarget_d_wb)), dists)
+    # )
+    # scores = list(map(lambda d: dist_to_score(d, 500.0), dists))
+    # score_llrs = list(map(
+    # lambda s: np.log(stats.exponweib.pdf(s, *target_wb) /
+    #                   stats.exponweib.pdf(s, *nontarget_wb)), scores)
+    # )
+
+    # fig, llr_plots = plt.subplots(2, sharex=False)
+    # llr_plots[0].plot(scores, score_llrs)
+    # llr_plots[1].plot(dists, dist_llrs)
 
 # ============================================================================
 # Plot
