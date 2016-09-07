@@ -17,8 +17,12 @@ import prepimage
 
 def load_backgrounds(folder):
     """read image file and convert to grayscale"""
-    return [np.dot(imread(os.path.join(folder, bg_file))[..., :3], [0.299, 0.587, 0.144])
-            for bg_file in os.listdir(folder) if '.jpg' in bg_file or '.png' in bg_file]
+    return [imresize(
+                np.dot(imread(os.path.join(folder, bg_file))[..., :3],
+                       [0.299, 0.587, 0.144]),
+            0.5)
+            for bg_file in os.listdir(folder)
+            if '.jpg' in bg_file or '.png' in bg_file]
 
 
 def get_background(img, size):
@@ -31,8 +35,14 @@ def get_background(img, size):
 def get_signatures(data_dir, no_forgeries=False):
     for (path, _, files) in os.walk(data_dir):
         for f in files:
-            if '.jpg' in f and not (no_forgeries and 'cf' in f):
+            if '.png' in f and not (no_forgeries and 'cf' in f):
                 yield os.path.join(path, f)
+
+
+def get_signatures_(data_dir, no_forgeries=False):
+    for f in os.listdir(data_dir):
+        if '.png' in f and not (no_forgeries and 'cf' in f):
+            yield os.path.join(data_dir, f)
 
 
 def get_roi(image, pad=20):
@@ -69,18 +79,18 @@ if __name__ == "__main__":
                         help='User to start with (for resumes)')
     args = parser.parse_args()
 
-    target_size = (96, 192)
+    target_size = (384, 768)
     # signatures = list(get_signatures(args.signatures))
     backgrounds = load_backgrounds(args.backgrounds)
     print("Loaded {} backgrounds".format(len(backgrounds)))
 
-    for user in range(args.start, 4001):
-        user_str = "{:03d}".format(user)
+    for user in range(args.start, 20):
+        user_str = "{}".format(user)
         print("processing user " + user_str)
         os.makedirs(os.path.join(args.out, user_str), exist_ok=True)
         count = 0
         start = time.clock()
-        for sig in get_signatures(os.path.join(args.signatures, user_str)):
+        for sig in get_signatures_(os.path.join(args.signatures, user_str)):
             fname, _ = os.path.splitext(os.path.basename(sig))
             for i in range(1, 21):
                 outname = os.path.join(args.out, user_str, "{}-{:02d}.png".format(fname, i))

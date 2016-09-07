@@ -16,14 +16,18 @@ from scipy.optimize import fmin
 from scipy.special import gamma as gammaf
 from chainer import cuda
 
+from matplotlib.pyplot import gca
+from matplotlib import rcParams
+
 import seaborn as sns
 sns.set_palette('colorblind')
 sns.set_color_codes("colorblind")
 
 
 AVG = True
-NUM_REF = 12  # 12 is used in the ICDAR SigWiComp 2013 Dutch Offline challenge
+NUM_REF = 6  # 12 is used in the ICDAR SigWiComp 2013 Dutch Offline challenge
 DIST_METHOD = 'sqeuclidean'
+SCALE = 1.0  # scaling dist_to_score
 
 
 # ============================================================================
@@ -199,7 +203,7 @@ def pdists_for_key(embeddings, k):
 
 def dist_to_score(dist, max_dist):
     """Supposed to compute P(target_trial | s)"""
-    return max(0, 2 * dist / max_dist)
+    return max(0, 2.5 * dist / max_dist)
     # return max(0, 1 - dist / max_dist)
 
 
@@ -277,14 +281,14 @@ if __name__ == '__main__':
 
 # ============================================================================
 
-    HIST_BINS = 50  # 50 seems to be good for visualization
+    HIST_BINS = 1000  # 50 seems to be good for visualization
     target_bins, target_bin_edges = np.histogram(target_scores,
                                                  bins=HIST_BINS,
-                                                 range=(0.0, 1.0),
+                                                 range=(0.0, SCALE),
                                                  density=True)
     nontarget_bins, nontarget_bin_edges = np.histogram(nontarget_scores,
                                                        bins=HIST_BINS,
-                                                       range=(0.0, 1.0),
+                                                       range=(0.0, SCALE),
                                                        density=True)
 
     target_dbins, target_dbin_edges = np.histogram(target_dists,
@@ -300,7 +304,7 @@ if __name__ == '__main__':
 
     print_stats(data)
 
-    STEP = 1.0
+    STEP = 0.1
     thresholds = np.arange(0.0, max_dist + STEP, STEP)
     zipped = list(roc(thresholds, data))
     (fpr, fnr, tpr, f1, acc, aer) = zip(*zipped)
@@ -347,83 +351,115 @@ if __name__ == '__main__':
 # ============================================================================
 
     fig, roc_plot = plt.subplots()
+
+    a = gca()
+    fontProperties = {'size': 12}
+    a.set_xticklabels(a.get_xticks(), fontProperties)
+    a.set_yticklabels(a.get_yticks(), fontProperties)
+    plt.gcf().subplots_adjust(bottom=0.15)
+
     roc_plot.plot(fpr, tpr)
-    roc_plot.set_xlabel('False-Positive-Rate')
-    roc_plot.set_ylabel('True-Positive-Rate')
+    roc_plot.set_xlabel('false accept rate (FAR)', fontsize=14)
+    roc_plot.set_ylabel('true accept rate (TAR)', fontsize=14)
     roc_plot.set_xlim([-0.05, 1.0])
     roc_plot.set_ylim([0.0, 1.05])
 
     roc_plot.scatter([fpr[best_acc_idx]], [tpr[best_acc_idx]],
-                     c='r', edgecolor='r', s=50,
-                     label='best accuracy: {:.2%} (t = {})'.format(
+                     c='r', edgecolor='r', s=150,
+                     label='best accuracy: {:.2%} (t = {:.1f})'.format(
         acc[best_acc_idx], thresholds[best_acc_idx]))
     roc_plot.scatter([fpr[best_f1_idx]], [tpr[best_f1_idx]],
-                     c='g', edgecolor='g', s=50,
-                     label='best F1: {:.2%} (t = {})'.format(
+                     c='g', edgecolor='g', s=150,
+                     label='best F1: {:.2%} (t = {:.1f})'.format(
         f1[best_f1_idx], thresholds[best_f1_idx]))
-    roc_plot.legend(loc='lower right', scatterpoints=1)
+    roc_plot.scatter([fpr[eer_idx]], [tpr[eer_idx]],  # marker='x',
+                     c='c', edgecolor='c', s=150,
+                     label='EER (t = {:.1f})'.format(thresholds[eer_idx]))
+    roc_plot.legend(loc='lower right', scatterpoints=1, fontsize=12)
+    # plt.rc('legend',**{'fontsize':6})
+    # plt.savefig("roc.svg", dpi=180, format='svg')
 
 # ============================================================================
-# Histograms
+# Histograms and Weibull distribution fit
 # ============================================================================
 
-    fig, dhist_plots = plt.subplots(2)
+# === Distances ===
 
-    width = 1.0 * (target_dbin_edges[1] - target_dbin_edges[0])
-    center = (target_dbin_edges[:-1] + target_dbin_edges[1:]) / 2
-    dhist_plots[0].bar(center, target_dbins, align='center', width=width)
+    # xx = np.linspace(0, max_dist, 500)
+    # w, h = plt.figaspect(0.3)
+    # fontsize = 16
 
-    width = 1.0 * (nontarget_dbin_edges[1] - nontarget_dbin_edges[0])
-    center = (nontarget_dbin_edges[:-1] + nontarget_dbin_edges[1:]) / 2
-    dhist_plots[1].bar(center, nontarget_dbins, align='center', width=width)
+    # fig, dhist_plots_target = plt.subplots(figsize=(w, h))
 
-    dhist_plots[0].set_title("Distance histogram target trials")
-    dhist_plots[1].set_title("Distance histogram non-target trials")
+    # width = 1.0 * (target_dbin_edges[1] - target_dbin_edges[0])
+    # center = (target_dbin_edges[:-1] + target_dbin_edges[1:]) / 2
+    # dhist_plots_target.bar(center, target_dbins, align='center', width=width)
 
-    fig, hist_plots = plt.subplots(2)
+    target_d_wb = stats.exponweib.fit(target_dists, 1, 1, scale=2, loc=0)
+    # yy = stats.exponweib.pdf(xx, *target_d_wb)
+    # dhist_plots_target.plot(xx, yy, 'r')
 
-    width = 1.0 * (target_bin_edges[1] - target_bin_edges[0])
-    center = (target_bin_edges[:-1] + target_bin_edges[1:]) / 2
-    hist_plots[0].bar(center, target_bins, align='center', width=width)
+    # dhist_plots_target.set_xlabel('Distance', fontsize=22)
+    # dhist_plots_target.set_ylabel('Density', fontsize=22)
 
-    width = 1.0 * (nontarget_bin_edges[1] - nontarget_bin_edges[0])
-    center = (nontarget_bin_edges[:-1] + nontarget_bin_edges[1:]) / 2
-    hist_plots[1].bar(center, nontarget_bins, align='center', width=width)
+    # a = gca()
+    # fontProperties = {'size': fontsize}
+    # a.set_xticklabels(a.get_xticks(), fontProperties)
+    # a.set_yticklabels(a.get_yticks(), fontProperties)
+    # plt.gcf().subplots_adjust(bottom=0.15)
+    # plt.savefig("hist_target_jap.svg", dpi=180, format='svg')
 
-    hist_plots[0].set_title("Score histogram target trials")
-    hist_plots[1].set_title("Score histogram non-target trials")
+    # fig, dhist_plots_nontarget = plt.subplots(figsize=(w, h))
 
-# ============================================================================
-# Weibull distribution fit
-# ============================================================================
+    # width = 1.0 * (nontarget_dbin_edges[1] - nontarget_dbin_edges[0])
+    # center = (nontarget_dbin_edges[:-1] + nontarget_dbin_edges[1:]) / 2
+    # dhist_plots_nontarget.bar(center, nontarget_dbins, align='center', width=width)
+
+    nontarget_d_wb = stats.exponweib.fit(nontarget_dists, 1, 1, scale=2, loc=0)
+    # yy = stats.exponweib.pdf(xx, *nontarget_d_wb)
+    # dhist_plots_nontarget.plot(xx, yy, 'r')
+
+    # dhist_plots_nontarget.set_xlabel('Distance', fontsize=22)
+    # dhist_plots_nontarget.set_ylabel('Density', fontsize=22)
+
+    # a = gca()
+    # fontProperties = {'size': fontsize}
+    # a.set_xticklabels(a.get_xticks(), fontProperties)
+    # a.set_yticklabels(a.get_yticks(), fontProperties)
+    # plt.gcf().subplots_adjust(bottom=0.15)
+    # plt.savefig("hist_nontarget_jap.svg", dpi=180, format='svg')
+
+# === Scores ===
+
+    # fig, hist_plots = plt.subplots(2)
+
+    # width = 1.0 * (target_bin_edges[1] - target_bin_edges[0])
+    # center = (target_bin_edges[:-1] + target_bin_edges[1:]) / 2
+    # hist_plots[0].bar(center, target_bins, align='center', width=width)
+
+    # width = 1.0 * (nontarget_bin_edges[1] - nontarget_bin_edges[0])
+    # center = (nontarget_bin_edges[:-1] + nontarget_bin_edges[1:]) / 2
+    # hist_plots[1].bar(center, nontarget_bins, align='center', width=width)
+
+    # hist_plots[0].set_title("Score histogram target trials")
+    # hist_plots[1].set_title("Score histogram non-target trials")
 
     # fit weibull to scores
-    xx = np.linspace(0, 1.0, 500)
+    # xx = np.linspace(0, 1.0, 500)
 
     target_wb = stats.exponweib.fit(target_scores, 1, 1, scale=2, loc=0)
-    yy = stats.exponweib.pdf(xx, *target_wb)
-    hist_plots[0].plot(xx, yy, 'r')
+    # yy = stats.exponweib.pdf(xx, *target_wb)
+    # hist_plots[0].plot(xx, yy, 'r')
 
     nontarget_wb = stats.exponweib.fit(nontarget_scores, 1, 1, scale=2, loc=0)
-    yy = stats.exponweib.pdf(xx, *nontarget_wb)
-    hist_plots[1].plot(xx, yy, 'r')
+    # yy = stats.exponweib.pdf(xx, *nontarget_wb)
+    # hist_plots[1].plot(xx, yy, 'r')
 
     # fig, wbs = plt.subplots()
     # wbs.plot(xx, stats.exponweib.cdf(xx, *target_wb), 'g')
     # wbs.plot(xx, stats.exponweib.pdf(xx, *target_wb), 'g')
     # wbs.plot(xx, stats.exponweib.cdf(xx, *nontarget_wb), 'r')
     # wbs.plot(xx, stats.exponweib.pdf(xx, *nontarget_wb), 'r')
-
-    # fit weibull to distances
-    xx = np.linspace(0, max_dist, 500)
-
-    target_d_wb = stats.exponweib.fit(target_dists, 1, 1, scale=2, loc=0)
-    yy = stats.exponweib.pdf(xx, *target_d_wb)
-    dhist_plots[0].plot(xx, yy, 'r')
-
-    nontarget_d_wb = stats.exponweib.fit(nontarget_dists, 1, 1, scale=2, loc=0)
-    yy = stats.exponweib.pdf(xx, *nontarget_d_wb)
-    dhist_plots[1].plot(xx, yy, 'r')
 
 # ============================================================================
 # Beta distribution fit -- doesn't work that well
@@ -460,14 +496,14 @@ if __name__ == '__main__':
 # DET-Plot
 # ============================================================================
 
-    fig, det_plot = plt.subplots()
-    plt.xscale('probit')
-    plt.yscale('probit')
-    plt.xlim([0, 0.5])
-    plt.ylim([0, 0.5])
-    det_plot.set_title("DET-plot")
-    det_plot.plot(fpr, fnr)
-    det_plot.plot(plt.xticks()[0], plt.yticks()[0], ':')
+    # fig, det_plot = plt.subplots()
+    # plt.xscale('probit')
+    # plt.yscale('probit')
+    # plt.xlim([0, 0.5])
+    # plt.ylim([0, 0.5])
+    # det_plot.set_title("DET-plot")
+    # det_plot.plot(fpr, fnr)
+    # det_plot.plot(plt.xticks()[0], plt.yticks()[0], ':')
 
 # ============================================================================
 # FoCal Toolkit

@@ -49,36 +49,42 @@ def plot_class(plot, data, label, color, forgery=False, n_dims=2):
                      label=label, alpha=1.0, linewidth=lw)
 
 
-def plot(data, num_classes, out, dims=2):
+def plot(data, num_classes, out):
     keys = sorted(list(data.keys()))
 
     colors = ['b', 'b', 'g', 'g', 'r', 'r',
               'y', 'y', 'c', 'c', 'm', 'm']
     # colors = ['b', 'g', 'r', 'k', 'c', 'm', 'y']
 
-    fig = plt.figure()
-    if dims == 2:
-        ax = fig.add_subplot(111)
-        # ax.set_xlim([-20, 10])
-        # ax.set_ylim([-10, 10])
-    elif dims == 3:
-        ax = fig.add_subplot(111, projection='3d')
-        ax = Axes3D(fig)
-    else:
-        print("Error: cannot plot in {} dimensions".format(dims))
-        exit()
+    fig, p2d = plt.subplots()
+    p2d.set_xlim([-15, 25])
+    # p2d.set_ylim([-10, 10])
 
     for i in range(num_classes):
         persona = cuda.cupy.asnumpy(data[keys[i]])
         c = colors[i % len(colors)]
         l = get_label(keys[i], i//2 + 1)
-        if dims == 2:
-            plot_class(ax, persona, l, c, '_f' in keys[i], dims)
-        else:
-            plot_class(ax, persona, l, c, '_f' in keys[i], dims)
-    plt.legend()
+        plot_class(p2d, persona, l, c, '_f' in keys[i], 2)
+    legend = plt.legend(frameon=1)
+    frame = legend.get_frame()
+    frame.set_color('white')
     if out is not None:
-        plt.savefig(out, dpi=180)
+        plt.savefig('a' + out, dpi=180)
+
+    fig, p3d = plt.subplots()
+    p3d = fig.add_subplot(111, projection='3d')
+    p3d = Axes3D(fig)
+    for i in range(num_classes):
+        persona = cuda.cupy.asnumpy(data[keys[i]])
+        c = colors[i % len(colors)]
+        l = get_label(keys[i], i//2 + 1)
+        plot_class(p3d, persona, l, c, '_f' in keys[i], 3)
+    legend = plt.legend(frameon=1)
+    frame = legend.get_frame()
+    frame.set_color('white')
+
+    if out is not None:
+        plt.savefig('b' + out, dpi=180)
     plt.show()
 
 if __name__ == '__main__':
@@ -98,4 +104,4 @@ if __name__ == '__main__':
               for key in data.keys() if key in keys}
     data = {**data_a, **data_b}
 
-    plot(data, len(data), "plot.png", dims)
+    plot(data, len(data), "plot.png")

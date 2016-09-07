@@ -99,15 +99,15 @@ optimizer.setup(model)
 optimizer.add_hook(chainer.optimizer.WeightDecay(args.weight_decay))
 optimizer.add_hook(chainer.optimizer.GradientClipping(10.0))
 
-# if args.initmodel and args.resume:
-#     load_snapshot(args.initmodel, args.resume, model, optimizer)
-#     print("Continuing from snapshot. LR: {}".format(optimizer.lr))
+if args.initmodel and args.resume:
+    load_snapshot(args.initmodel, args.resume, model, optimizer)
+    print("Continuing from snapshot. LR: {}".format(optimizer.lr))
 
 # load pre-trained CNN
-from chainer import serializers
-pretrained = VGGClf(100)
-serializers.load_hdf5(args.initmodel, pretrained)
-model.cnn.conv.copyparams(pretrained.conv)
+# from chainer import serializers
+# pretrained = VGGClf(100)
+# serializers.load_hdf5(args.initmodel, pretrained)
+# model.cnn.conv.copyparams(pretrained.conv)
 
 logger = Logger(args, optimizer, args.out)
 
