@@ -506,6 +506,14 @@ if __name__ == '__main__':
     # det_plot.plot(plt.xticks()[0], plt.yticks()[0], ':')
 
 # ============================================================================
+# Export LLR calculation helper
+# ============================================================================
+
+    import defense.llr
+    llr_obj = defense.llr.LLR(target_wb, nontarget_wb, max_dist)
+    llr_obj.export("defense/llr_calibration.pkl")
+
+# ============================================================================
 # FoCal Toolkit
 # ============================================================================
 
