@@ -67,7 +67,7 @@ def euclidean_distance(a, b):
     return cdist(a, b, 'sqeuclidean')
 
 
-def show_distances(imgs, distances):
+def show_distances(imgs, distances, label='distance'):
     width = 32
     height = 16
     plt.figure(figsize=(width, height))
@@ -77,7 +77,11 @@ def show_distances(imgs, distances):
     gs.update(hspace=0)
     for i in range(0, len(imgs), 1):
         ax[2*i].imshow(imgs[i], cmap=plt.cm.gray)
-        ax[2*i+1].text(0, 0.5, "distance: {:.2f}".format(distances[i][0][0]),
+        ax[2*i+1].text(0, 0.5, "{}: {:.2f}".format(label, distances[i][0][0]),
                        fontsize=42)
         ax[2*i].axis('off')
         ax[2*i+1].axis('off')
+
+
+def show_llrs(imgs, llrs):
+    show_distances(imgs, llrs, 'LLR')
